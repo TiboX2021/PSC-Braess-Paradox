@@ -8,20 +8,58 @@ Le mot clé "gare" devrait suffire
 TODO : faire un repo gitlab et leur partager le code. Je leur donnerai les accès
 
 """
-from typing import List
+from typing import List, Tuple
 from psc_util import fetch_urls
+from bs4 import BeautifulSoup, Tag
+import asyncio
 
 
 def createGoogleSearchUrl(search: str, client : str = 'firefox') -> str:
     """Search google for result"""
-    return f"https://www.google.com/search?client={client}-b-d&q={search.replace(' ', '+')}"
+    return f"https://www.google.com/search?q={search.replace(' ', '+')}"
 
-async def searchGoogleForEntries(searchList: List[str]) -> List[str]:
+def parseGoogleSearchResults(html: str) -> Tuple[str, str]:
+    """Parse the Google search result page for the first url"""
+
+    # Create html parser
+    soup = BeautifulSoup(html, 'html.parser')
+    print(soup)
+
+    # Get the search results from the page
+    search = soup.find("div", {"id": "search"})
+    print(search)
+    truc = search.find("div", {"id": "rso"})
+    print(truc)
+    results_list = truc.findChildren("div", recursive=False)
+    print(results_list)
+    # Get the first search result
+    first_result: Tag = results_list[0]
+
+    # Get url and title for the selected result
+    link_element = first_result.find("a")
+
+    link_url = link_element["href"]
+    title = link_element.find("h3").getText()
+
+    return title, link_url
+
+
+async def searchGoogleForEntries(search_list: List[str]) -> List[str]:
     """Search google for multiple search entries and return the first url for each entry"""
 
     # Create urls and index them by their search content
-    indexed_urls = [(search, createGoogleSearchUrl(search)) for search in searchList]
+    indexed_urls = [(search, createGoogleSearchUrl(search)) for search in search_list]
 
     indexed_responses = await fetch_urls(indexed_urls)
 
-    # TODO : analyze response and parse first url
+    indexed_parsed_results = [parseGoogleSearchResults(html_response) for _, html_response in indexed_responses]
+
+    # DEBUG : print out the results
+    for title, url in indexed_parsed_results:
+        print(title, url)
+
+if __name__ == "__main__":
+
+    search_list = ["wikipédia métro gare Joinville-le-Pont"]
+
+    asyncio.run(searchGoogleForEntries(search_list))
