@@ -68,10 +68,28 @@ if __name__ == "__main__":
     from googlesearch import search
     import itertools
 
-    result = search("wikipédia métro gare Bibliothèque François-Mitterrand") # Attention: ça ne renvoie pas forcément le bon url en premier!
-    # Il y a parfois ['https://upload.wikimedia.org en premier, à éliminer de la recherche
-    print(list(itertools.islice(result, 3)))
+    # result = search("wikipédia métro gare Bibliothèque François-Mitterrand") # Attention: ça ne renvoie pas forcément le bon url en premier!
+    # # Il y a parfois ['https://upload.wikimedia.org en premier, à éliminer de la recherche
+    # print(list(itertools.islice(result, 3)))
 
-    # Utiliser aiogoogle pour le faire de manière asynchrone
-    # https://aiogoogle.readthedocs.io/en/latest/#
+    # Utiliser aiogoogle pour le faire de manière asynchrone?
+    # Sinon essayer de wrap la recherche google dans des trucs async
+
+    def n_first_results(generator, n=3):
+        return list(itertools.islice(generator, n))
+
+    # test async:
+    searches = ["chien", "chat", "cochon"]
+
+    async def one_google_search(search_content):
+        print("searching", search_content, "!")
+        result = search(search_content)
+        print(n_first_results(result))
+
+    async def do_all_searches():
+        await asyncio.gather(*[one_google_search(a) for a in searches])
+
+    # Lancement des requêtes : regarder si c'est bien asynchrone
+    asyncio.run(do_all_searches())
+
 
