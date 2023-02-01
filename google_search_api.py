@@ -60,6 +60,18 @@ async def searchGoogleForEntries(search_list: List[str]) -> List[str]:
 
 if __name__ == "__main__":
 
-    search_list = ["wikipédia métro gare Joinville-le-Pont"]
+    # search_list = ["wikipédia métro gare Joinville-le-Pont"]
 
-    asyncio.run(searchGoogleForEntries(search_list))
+    # asyncio.run(searchGoogleForEntries(search_list))
+
+    # Using google's api instead
+    from googlesearch import search
+    import itertools
+
+    result = search("wikipédia métro gare Bibliothèque François-Mitterrand") # Attention: ça ne renvoie pas forcément le bon url en premier!
+    # Il y a parfois ['https://upload.wikimedia.org en premier, à éliminer de la recherche
+    print(list(itertools.islice(result, 3)))
+
+    # Utiliser aiogoogle pour le faire de manière asynchrone
+    # https://aiogoogle.readthedocs.io/en/latest/#
+
