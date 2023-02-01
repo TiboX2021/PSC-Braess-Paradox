@@ -81,15 +81,19 @@ if __name__ == "__main__":
     # test async:
     searches = ["chien", "chat", "cochon"]
 
-    async def one_google_search(search_content):
-        print("searching", search_content, "!")
+    def one_google_search(search_content):
+        print("searching for", search_content, "!")
         result = search(search_content)
         print(n_first_results(result))
 
+
+    async def execute_one_google_search_asynchronously(search_content):
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, one_google_search, search_content)  # utiliser ça pour faire des requêtes asynchrones!
+
+
     async def do_all_searches():
-        await asyncio.gather(*[one_google_search(a) for a in searches])
+        await asyncio.gather(*[execute_one_google_search_asynchronously(a) for a in searches])
 
     # Lancement des requêtes : regarder si c'est bien asynchrone
     asyncio.run(do_all_searches())
-
-
