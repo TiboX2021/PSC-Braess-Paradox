@@ -1,48 +1,61 @@
 """
 Fetch missing gps entries from wikipedia
-
-reprendre à partir de gps2, les autres sont complètement fucked up
-
-parfois ça renvoie direct sur le bon. Du coup mon code est pas hyper bien foutu. Un jour, il faudra que je fasse qqch de mieux.
-
-problème : maintenant, il faut regarder comment rechercher, par exemple gare alésia marche pas...
-pour alésia, il faut vraiment préciser métro.
-pb: ça marche pas avec Trinité - d'Estienne d'Orves Mais c'est dans la liste! Il faut juste une bonne fonction, qui soit capable de donner la priorité aux champs avec métro dedans
-
-ajouter gare ne fonctionne pas tout le temps! Par exemple dans ce cas ça rend les résultats moins bons
-
-mots clés qui rendent bien (sans gare, notamment : "(métro de Paris)") ATTENTION À METTRE LES PARENTHÈSES, SINON IL Y A GARES FANTÔMES QUI EST VALIDÉ ET QUI ARRIVE AVANT!
-=> encore meilleure idée : utiliser la fonction de matching de substring? bof, compliqué pour ce que c'est
-
-pour les gare de rer, est-ce qu'inscrire métro fonctionne aussi?
-
-=> inscrire métro n'est pas gênant pour le rer
-
-pour identifier les stations de métro, rechercher : "(métro de Paris)", normalement ça fonctionne pour tout le monde
-
-pour identifier les stations de rer : métro fonctionne aussi? test avec Joinville-le-Pont
-métro ne fonctionne pas...
-
-
-Dernière idée : aller sur google maps? Leur moteur de recherche est plus performant. Je regarde si les coordonnées gps coincident
-
-utiliser l'api de google! C'est plus rapide, mais c'est payant
-
-DE BASE : UTILISER LE FICHIER NO 2, PARCE QU'IL N'EST PAS POLLUÉ PAR L'ENCODAGE.
-C'est quoi le plan : aller tout chercher à la main?
-
-DERNIERE SOLUTION : recherche google. Ça peut marcher
-TODO : essayer avec un truc qui va directement chercher dans google.
 """
 import json
 import numpy as np
 from util.psc_util import *
 from bs4 import BeautifulSoup, Tag
 from typing import Tuple, List, Callable
+from api.google_search_api import searchGoogleForEntries
 
 
-index = 5
-base_wikipedia_url = "https://fr.wikipedia.org"
+index = 5 # pour le fichier
+
+def prepare_search_entries_for_wikipedia(search_entries: List[str]) -> List[str]:
+    """Add keywords to station names in order for the google search to return relevant urls"""
+    return [f"wikipedia gare métro {search_entry}" for search_entry in search_entries]
+
+async def get_geoloc_for_entries(search_list: List[str]) -> List[Tuple[str, Tuple[float, float]]]:
+    """Get geolocalization data for each search entry"""
+    # Fetch wikipedia page urls for each search entry
+    urls = await searchGoogleForEntries(prepare_search_entries_for_wikipedia(search_list))
+
+    # Fetch all wikipedia pages
+    print("Fetching wikipedia pages...")
+    resp = await fetch_urls(list(zip(search_list, urls)))
+
+    # Analyze geolocalization data and return it
+    return list(zip(search_list, [parse_lat_lon(html) for _, html in resp]))
+
+
+def find_missing_entries(graph: str, gps: str):
+    """Find missing gps entries in comparison to the graph"""
+    # todo: file names, etc
+    f = open("paris_network.json", encoding="utf-8")
+    data = json.loads(f.read())
+    f.close()
+
+    entries = data["stations"]
+
+    f = open(f"paris_gps{index}.json")
+    gps = json.loads(f.read())
+    f.close()
+
+    missing = []
+
+    for i, entry in enumerate(entries):
+
+        try:
+            gps[entry]
+        except:
+            missing.append(entry)
+            print("Missing entry no", i, entry)
+
+    missing = np.unique(missing)
+    print(len(missing), "missing entries")
+
+    # Recherche des trucs qui restent
+    search_entries = [f"métro {entry}" for entry in missing]
 
 # CODE PROPRE ICI ##################################################################################################
 

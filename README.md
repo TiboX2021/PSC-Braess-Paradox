@@ -10,6 +10,19 @@ Wrappers pour certaines apis dont on a besoin (ex: google pour chercher automati
 
 Code utilitaire pour le réutiliser dans d'autres scripts
 
+### SCRIPTS
+
+Scripts de data scraping, que j'ai utilisés pour aller chercher les stations et leur localisation sur internet, par exemple
+
+### ALGOS
+
+Algorithmes
+
+### TESTS
+
+Petits scripts de test pour afficher / analyser les données
+
+
 * braess.py : aglos de base sur le graphe du paradoxe de Braess
 * util.py : fonctions utilitaires pour braess.py, avec du typing pour les données de paris_network.json
 * psc_util.py : fonctions utilitaires que je réutilise dans d'autres fichiers, notamment pour faire du datascraping

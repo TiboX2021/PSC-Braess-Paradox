@@ -17,6 +17,8 @@ comptent comme 'end' alors qu'elles sont en plein milieu du réseau.
 from util.util import Network
 from typing import Tuple, List
 import numpy as np
+from scripts.nettoyage import *
+import json
 
 
 def load_edges(network: Network) -> List[np.ndarray]:
@@ -112,3 +114,25 @@ def compute_useless_vertices(network: Network) -> List[int]:
             blacklist.append(last_station)
 
     return deleted
+
+
+
+def load_dataset(filename: str) -> Network:
+
+    f = open(filename, 'r')
+    data = f.read()
+    f.close()
+
+    return json.loads(data)
+
+
+if __name__ == "__main__":
+
+    filename = "paris_network.json"
+
+    data = load_dataset(filename)
+
+    deleted = compute_useless_vertices(data)
+
+    print("deleted stations : \n")
+    print(deleted)

@@ -28,7 +28,7 @@ c"est un chemin pas trop absurde, mais il me manque encore l'affichage des flux 
 
 import matplotlib.pyplot as plt
 import numpy as np
-from braess import error_percentage
+from algos.braess import error_percentage
 import json
 from util.util import Network
 from typing import Dict, Tuple
