@@ -1,3 +1,4 @@
 *.json
+!paris_network.json
 __pycache__/
 .google-cookie
