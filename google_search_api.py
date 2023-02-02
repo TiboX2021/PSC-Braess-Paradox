@@ -5,7 +5,9 @@ Use examples from add_missing_gps.py
 
 Le mot clé "gare" devrait suffire
 
-TODO : faire un repo gitlab et leur partager le code. Je leur donnerai les accès
+TODO : create a function to do google searches asynchronously, and analyse incoming urls (use generator function until url is deemed correct)
+
+Then, use the traditionnal fetching from wikipedia page.
 
 """
 from typing import List, Tuple
@@ -13,87 +15,40 @@ from psc_util import fetch_urls
 from bs4 import BeautifulSoup, Tag
 import asyncio
 
+def searchGoogle(search_entry: str) -> str:
+    """Synchronous function for searching a url from google
+    TODO: filter url generator to get the correct wikipedia url"""
+    from googlesearch import search
+    url_generator = search(search_entry)
 
-def createGoogleSearchUrl(search: str, client : str = 'firefox') -> str:
-    """Search google for result"""
-    return f"https://www.google.com/search?q={search.replace(' ', '+')}"
-
-def parseGoogleSearchResults(html: str) -> Tuple[str, str]:
-    """Parse the Google search result page for the first url"""
-
-    # Create html parser
-    soup = BeautifulSoup(html, 'html.parser')
-    print(soup)
-
-    # Get the search results from the page
-    search = soup.find("div", {"id": "search"})
-    print(search)
-    truc = search.find("div", {"id": "rso"})
-    print(truc)
-    results_list = truc.findChildren("div", recursive=False)
-    print(results_list)
-    # Get the first search result
-    first_result: Tag = results_list[0]
-
-    # Get url and title for the selected result
-    link_element = first_result.find("a")
-
-    link_url = link_element["href"]
-    title = link_element.find("h3").getText()
-
-    return title, link_url
-
+    # Loop through urls until a correct one is found
+    for url in url_generator:
+        if True:
+            return url
 
 async def searchGoogleForEntries(search_list: List[str]) -> List[str]:
-    """Search google for multiple search entries and return the first url for each entry"""
+    """
+    Asynchronously execute google searches
+    TODO: return results + print
+    """
+    async_requests = []
+    loop = asyncio.get_event_loop()
 
-    # Create urls and index them by their search content
-    indexed_urls = [(search, createGoogleSearchUrl(search)) for search in search_list]
+    print("Creating coroutines...")
 
-    indexed_responses = await fetch_urls(indexed_urls)
+    for i, entry in enumerate(search_list):
+        print(f"\rCreating coroutine {i + 1}", "in", len(search_list), end="")
+        async_requests.append(loop.run_in_executor(None, searchGoogle, entry))
 
-    indexed_parsed_results = [parseGoogleSearchResults(html_response) for _, html_response in indexed_responses]
+    print("\nLaunching coroutines...")
 
-    # DEBUG : print out the results
-    for title, url in indexed_parsed_results:
-        print(title, url)
-
+    return await asyncio.gather(*async_requests)
+    
 if __name__ == "__main__":
-
-    # search_list = ["wikipédia métro gare Joinville-le-Pont"]
-
-    # asyncio.run(searchGoogleForEntries(search_list))
-
-    # Using google's api instead
-    from googlesearch import search
-    import itertools
-
-    # result = search("wikipédia métro gare Bibliothèque François-Mitterrand") # Attention: ça ne renvoie pas forcément le bon url en premier!
-    # # Il y a parfois ['https://upload.wikimedia.org en premier, à éliminer de la recherche
-    # print(list(itertools.islice(result, 3)))
-
-    # Utiliser aiogoogle pour le faire de manière asynchrone?
-    # Sinon essayer de wrap la recherche google dans des trucs async
-
-    def n_first_results(generator, n=3):
-        return list(itertools.islice(generator, n))
 
     # test async:
     searches = ["chien", "chat", "cochon"]
 
-    def one_google_search(search_content):
-        print("searching for", search_content, "!")
-        result = search(search_content)
-        print(n_first_results(result))
+    gares = ["wikipedia gare métro la défense", "wikipedia gare metro Joinville-le-Pont", "wikipedia gare metro bibliothèque francois mitterrand"]
 
-
-    async def execute_one_google_search_asynchronously(search_content):
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, one_google_search, search_content)  # utiliser ça pour faire des requêtes asynchrones!
-
-
-    async def do_all_searches():
-        await asyncio.gather(*[execute_one_google_search_asynchronously(a) for a in searches])
-
-    # Lancement des requêtes : regarder si c'est bien asynchrone
-    asyncio.run(do_all_searches())
+    asyncio.run(searchGoogleForEntries(gares))
