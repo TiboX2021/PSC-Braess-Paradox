@@ -1,7 +1,7 @@
 """
 Test des fonctions
 """
-from util import Network
+from util.util import Network
 from nettoyage import *
 import json
 

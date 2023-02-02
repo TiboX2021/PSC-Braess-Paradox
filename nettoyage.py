@@ -14,7 +14,7 @@ Non, liste de stations adjacentes pour chaque station. Autant faire ça dès l'i
 TODO: il faut gérer les stations ligne 10 qui se font avoir parce que le graphe est orienté et donc elles
 comptent comme 'end' alors qu'elles sont en plein milieu du réseau.
 """
-from util import Network
+from util.util import Network
 from typing import Tuple, List
 import numpy as np
 

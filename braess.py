@@ -45,7 +45,7 @@ import numpy as np
 from scipy.optimize import linprog
 import warnings
 import json
-from util import Network, gen_matrix_A
+from util.util import Network, gen_matrix_A
 import matplotlib.pyplot as plt
 warnings.filterwarnings('ignore', 'Solving system with option')
 warnings.filterwarnings('ignore', 'Ill-conditioned matrix')

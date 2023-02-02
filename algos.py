@@ -379,7 +379,7 @@ S          | 1980      E
 # AVEC ARETE A-B
 
 def BraessWith():
-    from util import gen_matrix_A
+    from util.util import gen_matrix_A
 
     # DEBUG:  comme liste de sommets et d'arrêtes
     vertices = 4  # number of vertices
@@ -454,7 +454,7 @@ def BraessWith():
 # SANS ARETE A-B
 
 def BraessWithout():
-    from util import gen_matrix_A
+    from util.util import gen_matrix_A
 
     # DEBUG:  comme liste de sommets et d'arrêtes
     vertices = 4  # number of vertices
@@ -555,7 +555,7 @@ B -> E
 
 
 def BraessWithUpdated():
-    from util import gen_matrix_A
+    from util.util import gen_matrix_A
 
     # DEBUG:  comme liste de sommets et d'arrêtes
     vertices = 4  # number of vertices

@@ -30,7 +30,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from braess import error_percentage
 import json
-from util import Network
+from util.util import Network
 from typing import Dict, Tuple
 import matplotlib.cm as cm
 

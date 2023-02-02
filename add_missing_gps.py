@@ -36,7 +36,7 @@ TODO : essayer avec un truc qui va directement chercher dans google.
 """
 import json
 import numpy as np
-from psc_util import *
+from util.psc_util import *
 from bs4 import BeautifulSoup, Tag
 from typing import Tuple, List, Callable
 
