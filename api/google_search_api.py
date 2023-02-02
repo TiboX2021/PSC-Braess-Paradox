@@ -9,9 +9,10 @@ def searchGoogle(search_entry: str) -> str:
     from googlesearch import search
     url_generator = search(search_entry)
 
-    # Loop through urls until a correct one is found
+    # Loop through urls until a correct one is found (refuse wikimedia adresses)
     for url in url_generator:
-        if True:
+        if "wikimedia" not in url:
+            print("Url found :", url)
             return url
 
 async def searchGoogleForEntries(search_list: List[str]) -> List[str]:
