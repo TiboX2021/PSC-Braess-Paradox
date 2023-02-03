@@ -26,7 +26,7 @@ async def get_geoloc_for_entries(search_list: List[str]) -> List[Tuple[str, Tupl
     return list(zip(search_list, [parse_lat_lon(html) for _, html in resp]))
 
 
-def find_missing_entries(graph: str = "paris_network.json", gps: str = "paris_gps2.json") -> List[str]:
+def find_missing_entries(graph: str = "paris_network.json", gps: str = "merged_gps.json") -> List[str]:
     """Find missing gps entries in comparison to the graph and return the names"""
     f = open(graph, encoding="utf-8")
     data = json.loads(f.read())
@@ -34,14 +34,13 @@ def find_missing_entries(graph: str = "paris_network.json", gps: str = "paris_gp
 
     entries = data["stations"]
 
-    f = open(gps)
+    f = open(gps, encoding="utf-8")
     gps = json.loads(f.read())
     f.close()
 
     missing = []
 
     for i, entry in enumerate(entries):
-
         try:
             gps[entry]
         except:
@@ -57,9 +56,11 @@ def find_missing_entries(graph: str = "paris_network.json", gps: str = "paris_gp
 if __name__ == "__main__":
 
     graph = "paris_network.json"
-    gps = "paris_gps2.json"
+    gps = "merged_gps.json"
 
     missing_entries = find_missing_entries(graph, gps)
+
+    exit()
 
     geoloc = asyncio.run(get_geoloc_for_entries(missing_entries))
 

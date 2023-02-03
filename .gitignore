@@ -1,4 +1,5 @@
 *.json
 !paris_network.json
+!paris_gps.json
 __pycache__/
 .google-cookie

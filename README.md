@@ -33,3 +33,5 @@ Petits scripts de test pour afficher / analyser les données
 
 * paris_network.json : graphe complet du métro de Paris
 * TODO: paris_gps.json : les données de géolocalisation pour chaque station du réseau. Je suis en train de compléter ça
+
+ATTENTION A UTILISER encoding="utf-8" POUR OUVRIR LES FICHIERS
