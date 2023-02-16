@@ -1,5 +1,5 @@
 """
-Utility : comme le format du fichier paris_network
+Utility : data format for many of the .json data files.
 """
 from typing import TypedDict, Tuple, List, Dict
 import numpy as np
@@ -13,6 +13,9 @@ class Network(TypedDict):
     metro_connections: List[Tuple[int, int]]
     rer_connections: List[Tuple[int, int]]
     trans_connections: List[Tuple[int, int]]
+
+# Typing for paris_gps.json
+GPS = Dict[str, Tuple[float, float]]
 
 
 """
@@ -40,3 +43,31 @@ def gen_matrix_A(vertices: int, edges: List[Tuple[int, int]]) -> np.ndarray:
         A[end, i] = +1
 
     return A
+
+def read_json(filename : str, encoding = "utf-8") -> any:
+    """Read data from a json file in one line"""
+    from json import loads
+
+    with open(filename, encoding=encoding) as f:
+        return loads(f.read())
+
+def rad(angle: float) -> float:
+    """Convert a degree angle to radians"""
+    from math  import pi
+    return angle * pi / 180
+
+
+def spherical_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """
+    Distance in meters between two point with (latitude, longitude) coordinates
+    This function needs angles in degrees (not radians)
+    We take 6371 km as the Earth radius
+    """
+    from math import acos, sin, cos
+
+    rad_lat1 = rad(lat1)
+    rad_lon1 = rad(lon1)
+    rad_lat2 = rad(lat2)
+    rad_lon2 = rad(lon2)
+
+    return acos( sin(rad_lat1) * sin(rad_lat2) + cos(rad_lat1) * cos(rad_lat2) * cos(rad_lon2 - rad_lon1)) * 6371000
