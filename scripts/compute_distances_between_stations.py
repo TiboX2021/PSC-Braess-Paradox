@@ -1,27 +1,9 @@
 """
 Compute all the distances between the stations as a way to weight the graph edges
 
-Output
-
-Longueur totale (m) 1941297.8404170615
-Longueur moyenne 1553.0382723336488
-Écart-type : 3370.3873391757434
-Maximum : 61019.42025202223
-Abnormally high distance between stations 602 (Le Coudray-Montceaux) and 603 (Saint-Fargeau) (wrong edge?)
-Abnormally high distance between stations 603 (Saint-Fargeau) and 602 (Le Coudray-Montceaux) (wrong edge?)
-Abnormally high distance between stations 603 (Saint-Fargeau) and 604 (Ponthierry - Pringy) (wrong edge?)
-Abnormally high distance between stations 604 (Ponthierry - Pringy) and 603 (Saint-Fargeau) (wrong edge?)
-
-les 4 précédents sont normaux normalement
-
-
-Abnormally high distance between stations 623 (Boigneville) and 624 (Malesherbes) (wrong edge?)
-Abnormally high distance between stations 624 (Malesherbes) and 623 (Boigneville) (wrong edge?)
-
-Ces 2 là sont normales. Il va falloir finir le reste à la main
-
-TODO: finir les corrections à la main. En général ce sont des coordonnées gps mauvaises qui ont été prises par le script automatique
-ATTENTION : ON DIRAIT QU'IL Y A DES CONFUSIONS ENTRE LES NOMS DE STATIONS. Il est possible que 2 stations aient des noms identiques?
+ATTENTION : il se trouve que les stations Saint-Fargeau et Malesherbes existent sur la ligne 3 et le RER D mais n'ont AUCUN lien.
+Par la suite, il faudra indexer les stations avec leur index int et non leur nom.
+En attendant, j'ai renommé les stations du RER D Malesherbes2 et Saint-Fargeau2.
 """
 from util.util import Network, GPS, read_json, spherical_distance
 import json
