@@ -4,6 +4,16 @@ Compute all the distances between the stations as a way to weight the graph edge
 ATTENTION : il se trouve que les stations Saint-Fargeau et Malesherbes existent sur la ligne 3 et le RER D mais n'ont AUCUN lien.
 Par la suite, il faudra indexer les stations avec leur index int et non leur nom.
 En attendant, j'ai renommé les stations du RER D Malesherbes2 et Saint-Fargeau2.
+
+TODO : ajouter les données de distance pour chaque arête, et les utiliser pour créer les poids dans l'algorithme.
+Il faut voir comment découper tout ça pour que le code soit propre tout en permettant des fonctions de coût personnalisées
+=> Faire un assert au début pour vérifier que la fonction de coût renvoie bien quelque chose pour un indice de 0 et un indice de fin-1?
+À voir
+
+Longueur totale (m) 1674609.9974726408
+Longueur moyenne 1341.8349338723085
+Écart-type : 1245.92483394084
+Maximum : 8087.636923749213
 """
 from util.util import Network, GPS, read_json, spherical_distance
 import json
