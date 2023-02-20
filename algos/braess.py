@@ -230,23 +230,21 @@ class Braess:
         )
 
 
-# Implémentation pour un seul couple sur le graphe de Paris (à voir, on va supposer des coûts comment? Linéaires?)
-# J'utilise l'algo n°1, avec des coûts linéaires pour chaque arête. Mettre un coût plus important pour les correspondances
-# TODO: augmenter le seuil à 500 et faire un profiling du code
-# Le code ne peut pas être substanciellement amélioré! ça va être très limité
 class Paris:
 
     A: np.ndarray
     B: np.ndarray  # pour un seul couple pour l'instant, tout le reste sera nul
     c: np.ndarray  # coüts
 
-    coeffs_couts: np.ndarray  # debug: coût linéaire arbitraire
+    a: np.ndarray  # debug: coût linéaire arbitraire
 
     SEUIL = 5
 
-    def __init__(self, data: Network):
-        """Chargement des données du graphe de Paris dans une matrice"""
-        # TODO: charger A, etc
+    def __init__(self, data: Network, edge_distances: List[float]):
+        """Chargement des données du graphe de Paris dans une matrice
+        TODO : améliorer les coûts. Dans une première version, je vais mettre distance de l'arête + x.
+        Pour les correspondances, je vais mettre un truc + x, genre 5000 (il faut que ça soit plus gros que la plus grosse arête)
+        """
 
         # Création de la matrice A
         edges = data["edges"] + data["metro_connections"] + \
@@ -256,7 +254,7 @@ class Paris:
 
         # Création de la matrice B: on fait aller 1000 personnes d'où à où?
         self.B = np.zeros(len(data["stations"]))
-        # TODO: remplir le départ et l'arrivée
+
         # Test avec les 2 premières stations
         self.B[0] = -1000
         self.B[100] = +1000
@@ -264,19 +262,22 @@ class Paris:
         # Création du vecteur de coûts (initialisation à 0)
         self.c = np.zeros(len(edges))
 
-        self.coeffs_couts = np.ones(len(edges))
+        # Coefficient multiplié par x pour chaque flux
+        self.a = np.ones(len(edges))
+
+        # Coefficient d'ordonnée à l'origine
+        self.b = edge_distances + [5000] * (len(edges) - len(edge_distances)) 
+
 
         # DEBUG : store flows
         self.flows = []
 
     def costs(self, flow):
         """Calcule les coûts par arête"""
-        return self.coeffs_couts * flow
+        return self.a * flow + self.b
 
-    # @njit: pb: avec numba pas de keyword, il faut tout mettre dans des sous fonctions
     def solve(self, log=True):
         """Résout le problème"""
-        # TODO: recopier le code de braess
 
         # TODO: debug
         print(self.c.shape, self.A.shape, self.B.shape)
@@ -330,9 +331,13 @@ if __name__ == "__main__":
 
     # Test avec paris
     f = open("paris_network.json")
-    data = json.loads(f.read())
+    graph_data = json.loads(f.read())
     f.close()
 
-    p = Paris(data)
+    f = open("edge_distances.json")
+    edge_distances = json.loads(f.read())
+    f.close()
+
+    p = Paris(graph_data, edge_distances)
 
     p.solve()
