@@ -51,8 +51,8 @@ class Display:
         self.colors.extend(["#00643C"] * (624 - 561)) # RER D
         self.colors.extend(["#A0006E"] * (646 - 624)) # RER E
 
-        print(n_stations)
-        print(len(self.colors))
+        # print(n_stations)
+        # print(len(self.colors))
 
     def compute_flow_matrix(self, flow: np.ndarray):
         """Combine the flow of different edges in the flow matrix"""
