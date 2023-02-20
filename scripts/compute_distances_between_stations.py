@@ -10,6 +10,14 @@ Il faut voir comment découper tout ça pour que le code soit propre tout en per
 => Faire un assert au début pour vérifier que la fonction de coût renvoie bien quelque chose pour un indice de 0 et un indice de fin-1?
 À voir
 
+Il faut aussi trouver un moyen de représenter les temps de correspondance
+Le temps de trajet représente un coût fixe, maintenant il faut que ça scale avec les passagers.
+=> vitesse moyenne des métros / RER est différente?
+métro : 21 à 27 km/h
+rer : problème : ça bouge beaucoup, les distances ne sont pas fiables...
+TODO: get travel time from google maps python? il faudrait fetch ça à intervalles réguliers
+https://stackoverflow.com/questions/17267807/python-google-maps-driving-time
+
 Longueur totale (m) 1674609.9974726408
 Longueur moyenne 1341.8349338723085
 Écart-type : 1245.92483394084
