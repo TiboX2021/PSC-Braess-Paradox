@@ -1,6 +1,9 @@
 *.json
+*.csv
+!out_v2.csv
 !paris_network.json
 !paris_gps.json
 !edge_distances.json
+!last_flow.json
 __pycache__/
 .google-cookie
