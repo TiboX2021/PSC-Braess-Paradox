@@ -1,5 +1,10 @@
 """
 Affichage du flux sur une carte avec les données gps et les données de flux sur un chemin donné
+
+POUR L'UTILISER, IL SUFFIT DE CHANGER LA VARIABLE "FICHIER_DU_FLUX_A_AFFICHER"
+
+La taille des marqueurs peut être changée avec "TAILLE_DES_MARQUEURS". Ils ne s'agrandissent pas
+quand on zoom, c'est pour ça qu'ils ont l'air trop grands au début ! Il faut zoomer sur la partie intéressante du graphe
 """
 import json
 import matplotlib.pyplot as plt
@@ -7,6 +12,12 @@ from matplotlib.cm import get_cmap
 import numpy as np
 from typing import Dict, Tuple
 from util.util import Network, read_json
+
+################################################################################
+#                          CHANGER CETTE VARIABLE                              #
+################################################################################
+FICHIER_DU_FLUX_A_AFFICHER = "last_flow.json"
+TAILLE_DES_MARQUEURS = 1.  # 0.5 ou 2, par exemple.
 
 
 class Display:
@@ -74,7 +85,7 @@ class Display:
             if self.flow_matrix[start, end] != -1:
 
                 relative_flow = self.flow_matrix[start, end] / max_flow
-                width = relative_flow * 15 + 1
+                width = TAILLE_DES_MARQUEURS * relative_flow * 15 + 1
 
                 # Edge width en fonction du flot relatif
 
@@ -104,7 +115,7 @@ class Display:
         y1, x1 = self.gps_data[start]
         end = self.network_data["stations"][100]
         y2, x2 = self.gps_data[end]
-        marker_size = "20"
+        marker_size = 20 * TAILLE_DES_MARQUEURS
         plt.plot(x1, y1, 'bo', markersize=marker_size)
         plt.plot(x2, y2, 'bo', markersize=marker_size)
 
@@ -116,7 +127,7 @@ class Display:
 if __name__ == "__main__":
 
     # Load last flow (extracted via script because opening the total flow file is way too long)
-    last_flow = np.array(read_json("last_flow.json"))
+    last_flow = np.array(read_json(FICHIER_DU_FLUX_A_AFFICHER))
 
     display = Display(gps_datafile="paris_gps.json", network_datafile="paris_network.json")
 
