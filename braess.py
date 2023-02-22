@@ -1,18 +1,19 @@
 """
-TODO pour le futur:
+Utilisation :
 
-* trouver un algo pour les chemins non débiles et le tester. Comparer à l'aide de l'algo qui prend beaucoup de temps.
-* Analyser les données envoyées par Cohen
-* faire un truc pour la représentation matplotlib des données quand on affiche le résultat pour le graphe de Paris. Il faut faire un truc très clean:
-visualisation: un plot interactif de matplotlib? Dans ce cas, il faut toutes les données
-
-Convergence basée sur un pourcentage d'erreur? Le donner.
-
-mettre un système pour log les flux sur Paris (pour les analyser derrière)
-
-
-essayer un pas qui décroît plus vite
+Modifier les 4 variables suivantes pour changer le flux calculé par l'algorithme
+Vous pouvez voir les indices des stations dans le fichier paris_network.json (avec les numéros
+des lignes en faisant une soustraction, ou directement si vous utilisez VSCode)
 """
+
+################################################################################
+#                       CALCUL D"UN TRAJET SUR PARIS                           #
+################################################################################
+NOMBRE_DE_PASSAGERS = 1000
+STATION_DEPART = 0
+STATION_ARRIVEE = 100
+SEUIL_CONVERGENCE = 5  # La norme 1 de la différence entre 2 flux consécutifs doit être plus petite que ça
+# Mettre 50 voire plus pour que l'algo s'arrête plus tôt. Ça dépend aussi du nombre de passagers
 
 
 """
@@ -238,7 +239,6 @@ class Paris:
 
     a: np.ndarray  # debug: coût linéaire arbitraire
 
-    SEUIL = 5
 
     def __init__(self, data: Network, edge_distances: List[float]):
         """Chargement des données du graphe de Paris dans une matrice
@@ -256,8 +256,8 @@ class Paris:
         self.B = np.zeros(len(data["stations"]))
 
         # Test avec les 2 premières stations
-        self.B[0] = -1000
-        self.B[100] = +1000
+        self.B[STATION_DEPART] = -NOMBRE_DE_PASSAGERS
+        self.B[STATION_ARRIVEE] = +NOMBRE_DE_PASSAGERS
 
         # Création du vecteur de coûts (initialisation à 0)
         self.c = np.zeros(len(edges))
@@ -279,8 +279,8 @@ class Paris:
     def solve(self, log=True):
         """Résout le problème"""
 
-        # TODO: debug
-        print(self.c.shape, self.A.shape, self.B.shape)
+        # debug
+        # print(self.c.shape, self.A.shape, self.B.shape)
 
         # Les flux + calcul du flux initial
         self.flow = linprog(self.c, A_eq=self.A, b_eq=self.B,
@@ -289,7 +289,7 @@ class Paris:
 
         i = 0
 
-        while np.sum(np.abs(self.flow - self.last_flow)) > Paris.SEUIL:
+        while np.sum(np.abs(self.flow - self.last_flow)) > SEUIL_CONVERGENCE:
 
             step = 1 / (i + 2)
 

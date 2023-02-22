@@ -17,7 +17,7 @@
 #### Scripts utiles
 
 * **affichage_flux.py** : affiche un flux (le dernier flux, par exemple). Il faut changer la variable *FICHIER_DU_FLUX_A_AFFICHER* au début du code pour afficher un autre flux. Pensez à bien mettre ce fichier dans le même dossier que le script, ou à préciser un chemin complet pour le fichier
-* **braess.py** : script qui permet de faire une simulation sur le graphe. Elle dure 30-40 min sur mon pc parce que l'algorithme effectue un grand nombre d'itérations pour beaucoup de précisions. Les flux successifs sont stockés dans un fichier _out.csv_ à la fin de l'exécution. Utiliser le script *extract_last_flow.py* pour générer un fichier json qui ne contient que le dernier flot afin de l'afficher.
+* **braess.py** : script qui permet de faire une simulation sur le graphe. Elle dure 30-40 min sur mon pc parce que l'algorithme effectue un grand nombre d'itérations pour beaucoup de précisions. Les flux successifs sont stockés dans un fichier _out.csv_ à la fin de l'exécution. Utiliser le script *extract_last_flow.py* pour générer un fichier json qui ne contient que le dernier flot afin de l'afficher. Les paramètres à modifier sont indiqués au début du fichier.
 
 
 
