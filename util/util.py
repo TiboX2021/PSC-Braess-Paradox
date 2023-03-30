@@ -44,12 +44,23 @@ def gen_matrix_A(vertices: int, edges: List[Tuple[int, int]]) -> np.ndarray:
 
     return A
 
-def read_json(filename : str, encoding = "utf-8") -> any:
+def read_json(filename : str, encoding = "utf-8") -> Dict:
     """Read data from a json file in one line"""
     from json import loads
 
     with open(filename, encoding=encoding) as f:
         return loads(f.read())
+    
+def write_json(filename: str, data: any, encoding = "utf-8") -> bool:
+    """Write data to a json file. Returns true if succeeded"""
+    from json import dumps
+
+    data = dumps(data, indent=4, ensure_ascii=False)
+
+    with open(filename, "w", encoding=encoding) as f:
+        f.write(data)
+        return True
+    return False
 
 def rad(angle: float) -> float:
     """Convert a degree angle to radians"""

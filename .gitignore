@@ -7,3 +7,6 @@
 !last_flow.json
 __pycache__/
 .google-cookie
+notes.txt
+output/
+images/

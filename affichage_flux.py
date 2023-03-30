@@ -45,7 +45,7 @@ class Display:
         self.colors.extend(["#9F971A"] * (74 - 49))
         self.colors.extend(["#99D4DE"] * (78 - 74))
         self.colors.extend(["#BE418D"] * (105 - 78))
-        self.colors.extend(["#F19043"] * (127 - 105)) # Ligne 5
+        self.colors.extend(["#F19043"] * (127 - 105)) # Ligne 5flows
         self.colors.extend(["#84C28E"] * (155 - 127)) # Ligne 6
         self.colors.extend(["#F2A4B7"] * (193 - 155)) #) Ligne 7
         self.colors.extend(["#84C28E"] * (201 - 193)) # Ligne 7 bis
@@ -123,15 +123,50 @@ class Display:
     
         plt.show()
 
+    def show_first_paths(self, filename: str):
+        """Show the first paths in different colors (for each path)"""
+
+        flows = read_json(filename)
+
+        colors = ['r', 'g', 'b', 'k', 'm', 'y']
+
+
+        for index, flow in enumerate(flows):
+
+            # TODO : display the flow
+            for value, (start, end)  in zip(flow, self.network_data["edges"]):
+
+                # Enumerate all edge values. Only display those that have non zero value
+
+                        
+                start_name, end_name = self.network_data["stations"][start], self.network_data["stations"][end]
+                start_lat, start_lon = self.gps_data[start_name]
+                end_lat, end_lon = self.gps_data[end_name]
+
+                # Pointillé si RER:
+                linestyle = '-'
+                if max(start, end) > 384:
+                    linestyle = '-.'
+
+
+                if value != 0:
+                    plt.plot((start_lon, end_lon), (start_lat, end_lat), linestyle + colors[index], linewidth=str(10), solid_capstyle='round')
+                else:
+                    plt.plot((start_lon, end_lon), (start_lat, end_lat), linestyle + 'k', linewidth=str(1), solid_capstyle='round')
+
+
+        plt.show()
+            
+
 
 if __name__ == "__main__":
 
     # Load last flow (extracted via script because opening the total flow file is way too long)
-    last_flow = np.array(read_json(FICHIER_DU_FLUX_A_AFFICHER))
+    # last_flow = np.array(read_json(FICHIER_DU_FLUX_A_AFFICHER))
 
     display = Display(gps_datafile="paris_gps.json", network_datafile="paris_network.json")
 
-    display.show_flow(last_flow)
-
+    # display.show_flow(last_flow)
+    display.show_first_paths("first-5-paths.json")
 
 
