@@ -12,11 +12,11 @@ from matplotlib.cm import get_cmap
 import numpy as np
 from typing import Dict, Tuple
 from util.util import Network, read_json
+from util.util import read_argv
 
 ################################################################################
 #                          CHANGER CETTE VARIABLE                              #
 ################################################################################
-FICHIER_DU_FLUX_A_AFFICHER = "test_last_flow.json"
 TAILLE_DES_MARQUEURS = 1.  # 0.5 ou 2, par exemple.
 
 
@@ -111,9 +111,9 @@ class Display:
             
         # DEBUG : affichage du point de départ et du point d'arrivée pour bien visualiser
         # La station 0 et la 100
-        start = self.network_data["stations"][0]
+        start = self.network_data["stations"][210]
         y1, x1 = self.gps_data[start]
-        end = self.network_data["stations"][100]
+        end = self.network_data["stations"][68]
         y2, x2 = self.gps_data[end]
         marker_size = 20 * TAILLE_DES_MARQUEURS
         plt.plot(x1, y1, 'bo', markersize=marker_size)
@@ -162,11 +162,15 @@ class Display:
 if __name__ == "__main__":
 
     # Load last flow (extracted via script because opening the total flow file is way too long)
-
     display = Display(gps_datafile="paris_gps.json", network_datafile="paris_network.json")
 
-    last_flow = np.array(read_json(FICHIER_DU_FLUX_A_AFFICHER))
-    display.show_flow(last_flow)
-    # display.show_first_paths("first-5-paths.json")
+    mode, filename = read_argv(2)
+
+    last_flow = np.array(read_json(filename))
+
+    if mode == 1:
+        display.show_flow(last_flow)
+    elif mode == 2:
+        display.show_first_paths("first-5-paths.json")
 
 

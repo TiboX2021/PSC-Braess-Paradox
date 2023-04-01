@@ -82,3 +82,11 @@ def spherical_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     rad_lon2 = rad(lon2)
 
     return acos( sin(rad_lat1) * sin(rad_lat2) + cos(rad_lat1) * cos(rad_lat2) * cos(rad_lon2 - rad_lon1)) * 6371000
+
+
+def read_argv(n: int) -> Tuple:
+    """Read the first n command line arguments"""
+    from sys import argv
+    assert len(argv) > n, f"Only {len(argv)} cli args, expected {n}"
+
+    return argv[1:n+1]

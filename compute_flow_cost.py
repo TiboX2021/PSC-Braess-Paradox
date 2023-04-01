@@ -8,10 +8,13 @@ Cost for a connection : 5000 + x
 """
 import numpy as np
 from typing import List
-from util.util import read_json, Network
+from util.util import read_json, Network, read_argv
+import sys
 
 if __name__ == "__main__":
-    
+
+    filename, = read_argv(1)
+   
     # Read network data
     edge_distances: List = read_json("edge_distances.json")
     network : Network = read_json("paris_network.json")
@@ -23,7 +26,7 @@ if __name__ == "__main__":
 
 
     # Read flow data
-    flow = np.array(read_json("optimized_paths_last_flow.json"))
+    flow = np.array(read_json(filename))
 
     total_cost = np.sum(a_coeffs * flow + b_coeffs)
 
