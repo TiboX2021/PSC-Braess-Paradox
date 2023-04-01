@@ -46,10 +46,11 @@ import numpy as np
 from scipy.optimize import linprog
 import warnings
 import json
-from util.util import Network, gen_matrix_A
+from util.util import Network, gen_matrix_A, write_json
 import matplotlib.pyplot as plt
-warnings.filterwarnings('ignore', 'Solving system with option')
-warnings.filterwarnings('ignore', 'Ill-conditioned matrix')
+
+warnings.filterwarnings("ignore", "Solving system with option")
+warnings.filterwarnings("ignore", "Ill-conditioned matrix")
 
 # Helper functions
 
@@ -72,9 +73,9 @@ class GraphProblem(TypedDict):
 
 
 class Braess:
-
     class BraessType(Enum):
         """Types of the graph used for showcasing the Braess Paradox"""
+
         WITHOUT_AB = 1
         WITH_AB = 2
         WITH_UPDATED_COSTS = 3
@@ -85,46 +86,131 @@ class Braess:
         BraessType.WITHOUT_AB: {
             "A": np.array(
                 [
-                    [-1,  0, -1,  0, ],
-                    [1, -1,  0,  0, ],
-                    [0,  0,  1, -1, ],
-                    [0,  1,  0,  1, ],
+                    [
+                        -1,
+                        0,
+                        -1,
+                        0,
+                    ],
+                    [
+                        1,
+                        -1,
+                        0,
+                        0,
+                    ],
+                    [
+                        0,
+                        0,
+                        1,
+                        -1,
+                    ],
+                    [
+                        0,
+                        1,
+                        0,
+                        1,
+                    ],
                 ]
             ),
             "b": np.array([-4000, 0, 0, +4000]),
-            "cost_function": lambda flow: np.array([flow[0]/100, 45, 45, flow[3]/100]),
-
+            "cost_function": lambda flow: np.array(
+                [flow[0] / 100, 45, 45, flow[3] / 100]
+            ),
             "initial_flow": np.array([4000, 4000, 0, 0]),
         },
-
         BraessType.WITH_AB: {
             "A": np.array(
                 [
-                    [-1,  0, -1,  0,  0,  0, ],
-                    [1, -1,  0, -1,  1,  0, ],
-                    [0,  0,  1,  1, -1, -1, ],
-                    [0,  1,  0,  0,  0,  1, ],
+                    [
+                        -1,
+                        0,
+                        -1,
+                        0,
+                        0,
+                        0,
+                    ],
+                    [
+                        1,
+                        -1,
+                        0,
+                        -1,
+                        1,
+                        0,
+                    ],
+                    [
+                        0,
+                        0,
+                        1,
+                        1,
+                        -1,
+                        -1,
+                    ],
+                    [
+                        0,
+                        1,
+                        0,
+                        0,
+                        0,
+                        1,
+                    ],
                 ]
             ),
             "b": np.array([-4000, 0, 0, +4000]),
-            "cost_function": lambda flow: np.array([flow[0]/100, 45, 45, 0, 0, flow[5]/100]),
-
+            "cost_function": lambda flow: np.array(
+                [flow[0] / 100, 45, 45, 0, 0, flow[5] / 100]
+            ),
             "initial_flow": np.array([4000, 4000, 0, 0, 0, 0]),
         },
         BraessType.WITH_UPDATED_COSTS: {
             "A": np.array(
                 [
-                    [-1,  0, -1,  0,  0,  0, ],
-                    [1, -1,  0, -1,  1,  0, ],
-                    [0,  0,  1,  1, -1, -1, ],
-                    [0,  1,  0,  0,  0,  1, ],
+                    [
+                        -1,
+                        0,
+                        -1,
+                        0,
+                        0,
+                        0,
+                    ],
+                    [
+                        1,
+                        -1,
+                        0,
+                        -1,
+                        1,
+                        0,
+                    ],
+                    [
+                        0,
+                        0,
+                        1,
+                        1,
+                        -1,
+                        -1,
+                    ],
+                    [
+                        0,
+                        1,
+                        0,
+                        0,
+                        0,
+                        1,
+                    ],
                 ]
             ),
             "b": np.array([-4000, 0, 0, +4000]),
-            "cost_function": lambda flow: np.array([flow[0]**2/200, flow[1]*45, flow[2]*45, 0, 0, flow[5]**2/200]),
-
+            "cost_function": lambda flow: np.array(
+                [
+                    flow[0] ** 2 / 200,
+                    flow[1] * 45,
+                    flow[2] * 45,
+                    0,
+                    0,
+                    flow[5] ** 2 / 200,
+                ]
+            ),
             "initial_flow": np.array([4000, 4000, 0, 0, 0, 0]),
-        }
+        },
     }
 
     def braess(graph_type: BraessType):
@@ -156,8 +242,14 @@ class Braess:
             last_flow = flow
 
             # Solve the linear problem
-            next_flow = linprog(costs, A_eq=A, b_eq=b,
-                                options={"rr": False, })['x']
+            next_flow = linprog(
+                costs,
+                A_eq=A,
+                b_eq=b,
+                options={
+                    "rr": False,
+                },
+            )["x"]
 
             # Compute the next flow
             flow = (1 - step) * last_flow + step * next_flow
@@ -171,24 +263,29 @@ class Braess:
         print("###############################################################")
         print()
         print("Convergence reached at iteration", i + 1)
-        print("The last two consecutive flows have less than",
-              Braess.CONVERGENCE_THRESHOLD, "people of difference in total")
+        print(
+            "The last two consecutive flows have less than",
+            Braess.CONVERGENCE_THRESHOLD,
+            "people of difference in total",
+        )
         print()
         Braess.pretty_print_braess(
-            values=flow, AB=False if graph_type == Braess.BraessType.WITHOUT_AB else True)
+            values=flow,
+            AB=False if graph_type == Braess.BraessType.WITHOUT_AB else True,
+        )
         print()
-        print("Total cost :", int(np.round(
-            Braess.standard_cost_function(flow))))
+        print("Total cost :", int(np.round(Braess.standard_cost_function(flow))))
 
     @staticmethod
     def standard_cost_function(flow: np.ndarray) -> float:
 
         if len(flow) == 4:
-            return flow[0]**2/100 + 45 * flow[1] + 45 * flow[2] + flow[3] ** 2/100
+            return flow[0] ** 2 / 100 + 45 * flow[1] + 45 * flow[2] + flow[3] ** 2 / 100
         elif len(flow) == 6:
-            return flow[0]**2/100 + 45 * flow[1] + 45 * flow[2] + flow[5]**2/100
+            return flow[0] ** 2 / 100 + 45 * flow[1] + 45 * flow[2] + flow[5] ** 2 / 100
         else:
             raise Exception(f"Bad flow size :", len(flow))
+
     ################################################################################
     #                            Pretty printing                                   #
     ################################################################################
@@ -218,8 +315,9 @@ class Braess:
 
         values = np.round(values, decimals=0).astype(int)
 
-        assert len(
-            values) == n_values, f"{n_values} values required, only {len(values)} provided"
+        assert (
+            len(values) == n_values
+        ), f"{n_values} values required, only {len(values)} provided"
 
         print(
             f"{Braess.embed_number(values[0], size=12)}{Braess.embed_number(values[1], size=11)}\n"
@@ -239,7 +337,6 @@ class Paris:
 
     a: np.ndarray  # debug: coût linéaire arbitraire
 
-
     def __init__(self, data: Network, edge_distances: List[float]):
         """Chargement des données du graphe de Paris dans une matrice
         TODO : améliorer les coûts. Dans une première version, je vais mettre distance de l'arête + x.
@@ -247,8 +344,12 @@ class Paris:
         """
 
         # Création de la matrice A
-        edges = data["edges"] + data["metro_connections"] + \
-            data["rer_connections"] + data["trans_connections"]
+        edges = (
+            data["edges"]
+            + data["metro_connections"]
+            + data["rer_connections"]
+            + data["trans_connections"]
+        )
 
         self.A = gen_matrix_A(vertices=len(data["stations"]), edges=edges)
 
@@ -266,8 +367,7 @@ class Paris:
         self.a = np.ones(len(edges))
 
         # Coefficient d'ordonnée à l'origine
-        self.b = edge_distances + [5000] * (len(edges) - len(edge_distances)) 
-
+        self.b = edge_distances + [5000] * (len(edges) - len(edge_distances))
 
         # DEBUG : store flows
         self.flows = []
@@ -283,8 +383,14 @@ class Paris:
         # print(self.c.shape, self.A.shape, self.B.shape)
 
         # Les flux + calcul du flux initial
-        self.flow = linprog(self.c, A_eq=self.A, b_eq=self.B,
-                            options={"rr": False, })['x']
+        self.flow = linprog(
+            self.c,
+            A_eq=self.A,
+            b_eq=self.B,
+            options={
+                "rr": False,
+            },
+        )["x"]
         self.last_flow = np.zeros(self.flow.shape)
 
         i = 0
@@ -302,8 +408,14 @@ class Paris:
             self.last_flow = self.flow
 
             # Solve the linear problem
-            gradient = linprog(costs, A_eq=self.A, b_eq=self.B,
-                               options={"rr": False, })['x']
+            gradient = linprog(
+                costs,
+                A_eq=self.A,
+                b_eq=self.B,
+                options={
+                    "rr": False,
+                },
+            )["x"]
 
             # Compute the next flow
             self.flow = (1 - step) * self.last_flow + step * gradient
@@ -311,14 +423,197 @@ class Paris:
             i += 1
 
             error = error_percentage(self.flow, self.last_flow)
-            print("Itération n°", i, "erreur :", error, "écart", np.sum(
-                np.abs(self.flow - self.last_flow)))
+            print(
+                "Itération n°",
+                i,
+                "erreur :",
+                error,
+                "écart",
+                np.sum(np.abs(self.flow - self.last_flow)),
+            )
 
         print("convergence après", i, "itérations")
 
         # Calcul des erreurs cumulées par rapport à la dernière valeur
         if log:
             np.savetxt("out.csv", self.flows, delimiter=",")
+
+    def solve_paths(self, n: int = 5, log=True):
+        """Résout le problème avec les n premiers chemins
+
+        TODO : documenter ça
+        TODO : faire en sorte que ça output un flow à la sortie avec un coût qu'on pourra comparer à l'autre méthode
+        """
+
+        # TODO : do this first process in the function that extracts paths
+        first_n_paths = self.first_paths(n)
+
+       # DEBUG
+        print(first_n_paths.shape)
+
+        # Remove duplicates
+        # first_n_paths = np.unique(first_n_paths, axis=0)
+
+        # Extract boolean paths
+        # For each path, store its edges as a boolean value : this edge belongs / does not belong
+        boolean_paths: np.ndarray = first_n_paths != 0
+
+        #############################################################################
+        #                           BUILD LINPROG MATRIX                            #
+        #############################################################################
+        # The only constraint is that the sum of passengers along all paths is always equal to the initial total number
+
+        self.A = np.ones((1, len(first_n_paths)))  # Sum all passengers for all paths
+        self.B = NOMBRE_DE_PASSAGERS  # Total number of passengers
+
+        #############################################################################
+        #                             BUILD COST MATRIX                             #
+        #############################################################################
+        # The cost is computed for each edge as a * flow + b
+        # Agregate a & b coefficients for every path
+        # An A matrix must be built to account for overlapping edges. The b coefficient is constant and does not need to be adjusted
+
+        # Boolean_paths is of size n * edges
+        # Diagonal matrix of size edges * edges
+        diagonal_a = np.diag(self.a)
+
+        # The result matrix is of size n * n
+        agregated_A_cost_matrix = boolean_paths @ diagonal_a @ boolean_paths.T
+
+        # Same for b, but only a vector is needed
+        agregated_B_cost_vector = boolean_paths @ self.b
+
+        def compute_cost_vector(flow_vector: np.ndarray) -> np.ndarray:
+            """Compute the cost vector (of size n) from the flow vector (of size n)"""
+            return agregated_A_cost_matrix @ flow_vector + agregated_B_cost_vector
+
+        #############################################################################
+        #                   COMPUTE INITIAL COST WITHOUT FLOW                       #
+        #############################################################################
+
+        cost_vector = compute_cost_vector(np.zeros(n))
+
+        # Solve the linear problem for this initial cost
+        self.flow = linprog(
+            cost_vector,  # Cost vector : minimise the dot product cost_vector @ flow
+            A_eq=self.A,
+            b_eq=self.B,
+            options={
+                "rr": False,
+            },
+        )["x"]
+
+        # Store last flow value
+        self.last_flow = np.zeros(self.flow.shape)
+
+        i = 0
+
+        while np.sum(np.abs(self.flow - self.last_flow)) > SEUIL_CONVERGENCE:
+
+            step = 1 / (i + 2)
+
+            # Update the cost
+            cost_vector = compute_cost_vector(self.flow)
+
+            # Update last flow value
+            self.last_flow = self.flow
+
+            # Solve the linear problem
+            gradient = linprog(
+                cost_vector,
+                A_eq=self.A,
+                b_eq=self.B,
+                options={
+                    "rr": False,
+                },
+            )["x"]
+
+            # Compute the next flow
+            self.flow = (1 - step) * self.last_flow + step * gradient
+
+            i += 1
+
+            # DEBUG : print error percentage to see the progress
+            error = error_percentage(self.flow, self.last_flow)
+            print(
+                "Itération n°",
+                i,
+                "erreur :",
+                error,
+                "écart",
+                np.sum(np.abs(self.flow - self.last_flow)),
+            )
+
+        print("convergence après", i, "itérations")
+
+        #############################################################################
+        #               REBUILD THE LAST FLOW FROM PATHS TO EDGES                   #
+        #############################################################################      
+        if log:
+            # Rebuild flow
+            converted_flow = boolean_paths.T @ self.flow
+
+            # Save in in a json file
+            write_json("test_last_flow.json", list(converted_flow))
+
+            # TODO : compute cost
+
+    def first_paths(self, n: int, log: bool = False) -> np.ndarray:
+        """
+        Evaluate the first n paths and log them
+        Returns an array of n arrays representign circulation along the edges
+        """
+
+        # Les flux + calcul du flux initial
+        self.flow = linprog(
+            self.c,
+            A_eq=self.A,
+            b_eq=self.B,
+            options={
+                "rr": False,
+            },
+        )["x"]
+        self.last_flow = np.zeros(self.flow.shape)
+
+        self.flows = []
+
+        for i in range(n):
+            print("Step", i + 1, "of", n, "...")
+
+            step = 1 / (i + 2)
+
+            # Update the cost for each edge
+            costs = self.costs(self.flow)
+
+            self.last_flow = self.flow
+
+            # Solve the linear problem
+            gradient = linprog(
+                costs,
+                A_eq=self.A,
+                b_eq=self.B,
+                options={
+                    "rr": False,
+                },
+            )["x"]
+
+            # Log this path
+            self.flows.append(gradient)
+
+            # Compute the next flow
+            self.flow = (1 - step) * self.last_flow + step * gradient
+
+        if log:
+            # Save paths
+            print(n, "paths stored. Saving...")
+
+            # De-numpify for json serialization
+            flows = [x.tolist() for x in self.flows]
+
+            success = write_json(f"first-{n}-paths.json", flows)
+            print("Saving done with status", success)
+
+        return np.array(self.flows)
 
 
 if __name__ == "__main__":
@@ -340,4 +635,4 @@ if __name__ == "__main__":
 
     p = Paris(graph_data, edge_distances)
 
-    p.solve()
+    p.solve_paths()

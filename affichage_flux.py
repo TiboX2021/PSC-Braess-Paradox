@@ -16,7 +16,7 @@ from util.util import Network, read_json
 ################################################################################
 #                          CHANGER CETTE VARIABLE                              #
 ################################################################################
-FICHIER_DU_FLUX_A_AFFICHER = "last_flow.json"
+FICHIER_DU_FLUX_A_AFFICHER = "test_last_flow.json"
 TAILLE_DES_MARQUEURS = 1.  # 0.5 ou 2, par exemple.
 
 
@@ -162,11 +162,11 @@ class Display:
 if __name__ == "__main__":
 
     # Load last flow (extracted via script because opening the total flow file is way too long)
-    # last_flow = np.array(read_json(FICHIER_DU_FLUX_A_AFFICHER))
 
     display = Display(gps_datafile="paris_gps.json", network_datafile="paris_network.json")
 
-    # display.show_flow(last_flow)
-    display.show_first_paths("first-5-paths.json")
+    last_flow = np.array(read_json(FICHIER_DU_FLUX_A_AFFICHER))
+    display.show_flow(last_flow)
+    # display.show_first_paths("first-5-paths.json")
 
 
