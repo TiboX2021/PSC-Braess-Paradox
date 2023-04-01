@@ -10,8 +10,8 @@ des lignes en faisant une soustraction, ou directement si vous utilisez VSCode)
 #                       CALCUL D"UN TRAJET SUR PARIS                           #
 ################################################################################
 NOMBRE_DE_PASSAGERS = 1000
-STATION_DEPART = 0
-STATION_ARRIVEE = 100
+STATION_DEPART = 0  # 210 # Invalides
+STATION_ARRIVEE = 100  # 68 # République
 SEUIL_CONVERGENCE = 5  # La norme 1 de la différence entre 2 flux consécutifs doit être plus petite que ça
 # Mettre 50 voire plus pour que l'algo s'arrête plus tôt. Ça dépend aussi du nombre de passagers
 
@@ -39,18 +39,21 @@ B -> E
 
 """
 
-# Disable warnings
-from typing import List, TypedDict, Callable, Dict
+import json
+import warnings
 from enum import Enum
+from time import time
+# Disable warnings
+from typing import List, TypedDict, Callable, Dict, Tuple
+
 import numpy as np
 from scipy.optimize import linprog
-import warnings
-import json
+
 from util.util import Network, gen_matrix_A, write_json
-import matplotlib.pyplot as plt
 
 warnings.filterwarnings("ignore", "Solving system with option")
 warnings.filterwarnings("ignore", "Ill-conditioned matrix")
+
 
 # Helper functions
 
@@ -233,7 +236,6 @@ class Braess:
         i = 0
 
         while np.sum(np.abs(flow - last_flow)) > Braess.CONVERGENCE_THRESHOLD:
-
             step = 1 / (i + 2)
 
             # Update the cost for each edge
@@ -316,7 +318,7 @@ class Braess:
         values = np.round(values, decimals=0).astype(int)
 
         assert (
-            len(values) == n_values
+                len(values) == n_values
         ), f"{n_values} values required, only {len(values)} provided"
 
         print(
@@ -330,7 +332,6 @@ class Braess:
 
 
 class Paris:
-
     A: np.ndarray
     B: np.ndarray  # pour un seul couple pour l'instant, tout le reste sera nul
     c: np.ndarray  # coüts
@@ -345,10 +346,10 @@ class Paris:
 
         # Création de la matrice A
         edges = (
-            data["edges"]
-            + data["metro_connections"]
-            + data["rer_connections"]
-            + data["trans_connections"]
+                data["edges"]
+                + data["metro_connections"]
+                + data["rer_connections"]
+                + data["trans_connections"]
         )
 
         self.A = gen_matrix_A(vertices=len(data["stations"]), edges=edges)
@@ -379,6 +380,7 @@ class Paris:
     def solve(self, log=True):
         """Résout le problème"""
 
+        setup_time = time()
         # debug
         # print(self.c.shape, self.A.shape, self.B.shape)
 
@@ -394,6 +396,9 @@ class Paris:
         self.last_flow = np.zeros(self.flow.shape)
 
         i = 0
+
+        setup_time = time() - setup_time
+        loop_time = time()
 
         while np.sum(np.abs(self.flow - self.last_flow)) > SEUIL_CONVERGENCE:
 
@@ -434,25 +439,34 @@ class Paris:
 
         print("convergence après", i, "itérations")
 
+        loop_time = time() - loop_time
+        print("TOTAL TIME :", setup_time + loop_time, "s")
+        print("Setup took", setup_time, "s")
+        print("Loop time took", loop_time, "s")
+
         # Calcul des erreurs cumulées par rapport à la dernière valeur
         if log:
             np.savetxt("out.csv", self.flows, delimiter=",")
 
-    def solve_paths(self, n: int = 5, log=True):
+    def solve_paths(self, n: int = 5, couples: List[Tuple[int, int]] = [STATION_DEPART, STATION_ARRIVEE], log=True):
         """Résout le problème avec les n premiers chemins
-
-        TODO : documenter ça
-        TODO : faire en sorte que ça output un flow à la sortie avec un coût qu'on pourra comparer à l'autre méthode
         """
 
         # TODO : do this first process in the function that extracts paths
+        # TODO : comme on va réutiliser ça pour faire plusieurs points de départ et d'arrivée, il faudrait faire en sorte que ça dépende moins de l'initialisation
+        first_n_paths_time = time()  # Start time
+
         first_n_paths = self.first_paths(n)
 
-       # DEBUG
+        first_n_paths_time = time() - first_n_paths_time
+
+        # DEBUG
         print(first_n_paths.shape)
 
         # Remove duplicates
         # first_n_paths = np.unique(first_n_paths, axis=0)
+
+        setup_time = time()  # Setup time
 
         # Extract boolean paths
         # For each path, store its edges as a boolean value : this edge belongs / does not belong
@@ -508,8 +522,10 @@ class Paris:
 
         i = 0
 
-        while np.sum(np.abs(self.flow - self.last_flow)) > SEUIL_CONVERGENCE:
+        setup_time = time() - setup_time
+        loop_time = time()
 
+        while np.sum(np.abs(self.flow - self.last_flow)) > SEUIL_CONVERGENCE:
             step = 1 / (i + 2)
 
             # Update the cost
@@ -546,6 +562,12 @@ class Paris:
 
         print("convergence après", i, "itérations")
 
+        loop_time = time() - loop_time
+        print("TOTAL TIME :", first_n_paths_time + setup_time + loop_time, "s")
+        print("First", n, "paths took", first_n_paths_time, "s")
+        print("Setup took", setup_time, "s")
+        print("Loop time took", loop_time, "s")
+
         #############################################################################
         #               REBUILD THE LAST FLOW FROM PATHS TO EDGES                   #
         #############################################################################      
@@ -555,8 +577,6 @@ class Paris:
 
             # Save in in a json file
             write_json("test_last_flow.json", list(converted_flow))
-
-            # TODO : compute cost
 
     def first_paths(self, n: int, log: bool = False) -> np.ndarray:
         """
@@ -617,7 +637,6 @@ class Paris:
 
 
 if __name__ == "__main__":
-
     # pretty_print_braess([1, 2, 3, 4, 5], True)
 
     # Braess.braess(Braess.BraessType.WITHOUT_AB)
@@ -635,4 +654,5 @@ if __name__ == "__main__":
 
     p = Paris(graph_data, edge_distances)
 
+    # p.solve()
     p.solve_paths()
