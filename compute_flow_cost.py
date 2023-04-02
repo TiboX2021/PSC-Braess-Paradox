@@ -28,7 +28,8 @@ if __name__ == "__main__":
     # Read flow data
     flow = np.array(read_json(filename))
 
-    total_cost = np.sum(a_coeffs * flow + b_coeffs)
+    # IMPROVEMENT : only add the b_coeff where there are people? Else this is just a constant cost...
+    total_cost = np.sum(a_coeffs * flow * flow + b_coeffs * flow)  # En réalité il faudrait écrire ça comme ça !
 
     print("Total cost for this flow :")
     print(total_cost)
