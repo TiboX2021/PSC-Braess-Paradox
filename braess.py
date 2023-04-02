@@ -39,7 +39,6 @@ B -> E
 
 """
 
-import json
 import warnings
 from enum import Enum
 from time import time
@@ -49,7 +48,7 @@ from typing import List, TypedDict, Callable, Dict, Tuple
 import numpy as np
 from scipy.optimize import linprog
 
-from util.util import Network, gen_matrix_A, write_json
+from util.util import Network, gen_matrix_A, write_json, read_json
 
 warnings.filterwarnings("ignore", "Solving system with option")
 warnings.filterwarnings("ignore", "Ill-conditioned matrix")
@@ -324,9 +323,9 @@ class Braess:
         print(
             f"{Braess.embed_number(values[0], size=12)}{Braess.embed_number(values[1], size=11)}\n"
             "  _________A_________  \n"
-            " /         |         \ \n"
+            " /         |         \\ \n"
             f"S          |{Braess.embed_number(abs(values[2] - values[3]), size=10) if AB else ' ' * 10}E\n"
-            " \_________B_________/ \n"
+            " \\_________B_________/ \n"
             f"{Braess.embed_number(values[2 + AB * 2], size=12)}{Braess.embed_number(values[3 + AB * 2], size=11)}\n"
         )
 
@@ -337,12 +336,14 @@ class Paris:
     c: np.ndarray  # coüts
 
     a: np.ndarray  # debug: coût linéaire arbitraire
+    data: Network
 
     def __init__(self, data: Network, edge_distances: List[float]):
         """Chargement des données du graphe de Paris dans une matrice
         TODO : améliorer les coûts. Dans une première version, je vais mettre distance de l'arête + x.
         Pour les correspondances, je vais mettre un truc + x, genre 5000 (il faut que ça soit plus gros que la plus grosse arête)
         """
+        self.data = data
 
         # Création de la matrice A
         edges = (
@@ -351,16 +352,14 @@ class Paris:
                 + data["rer_connections"]
                 + data["trans_connections"]
         )
+        #############################################################################
+        #                             SHARED VARIABLES                              #
+        #############################################################################
 
+        # Matrix that represents the network (shared between all methods)
         self.A = gen_matrix_A(vertices=len(data["stations"]), edges=edges)
 
-        # Création de la matrice B: on fait aller 1000 personnes d'où à où?
-        self.B = np.zeros(len(data["stations"]))
-
-        # Test avec les 2 premières stations
-        self.B[STATION_DEPART] = -NOMBRE_DE_PASSAGERS
-        self.B[STATION_ARRIVEE] = +NOMBRE_DE_PASSAGERS
-
+        # COSTS
         # Création du vecteur de coûts (initialisation à 0)
         self.c = np.zeros(len(edges))
 
@@ -370,10 +369,21 @@ class Paris:
         # Coefficient d'ordonnée à l'origine
         self.b = edge_distances + [5000] * (len(edges) - len(edge_distances))
 
+        #############################################################################
+        #                           NOT SHARED VARIABLES                            #
+        #############################################################################
+        # TODO : eventually, remove these variables
+        # Création de la matrice B: on fait aller 1000 personnes d'où à où?
+        self.B = np.zeros(len(data["stations"]))
+
+        # Test avec les 2 premières stations
+        self.B[STATION_DEPART] = -NOMBRE_DE_PASSAGERS
+        self.B[STATION_ARRIVEE] = +NOMBRE_DE_PASSAGERS
+
         # DEBUG : store flows
         self.flows = []
 
-    def costs(self, flow):
+    def compute_edge_costs(self, flow):
         """Calcule les coûts par arête"""
         return self.a * flow + self.b
 
@@ -408,7 +418,7 @@ class Paris:
                 self.flows.append(self.flow)
 
             # Update the cost for each edge
-            costs = self.costs(self.flow)
+            costs = self.compute_edge_costs(self.flow)
 
             self.last_flow = self.flow
 
@@ -448,7 +458,7 @@ class Paris:
         if log:
             np.savetxt("out.csv", self.flows, delimiter=",")
 
-    def solve_paths(self, n: int = 5, couples: List[Tuple[int, int]] = [STATION_DEPART, STATION_ARRIVEE], log=True):
+    def solve_paths(self, n: int = 5, couples: List[Tuple[int, int]] = (STATION_DEPART, STATION_ARRIVEE), log=True):
         """Résout le problème avec les n premiers chemins
         """
 
@@ -578,24 +588,40 @@ class Paris:
             # Save in in a json file
             write_json("test_last_flow.json", list(converted_flow))
 
-    def first_paths(self, n: int, log: bool = False) -> np.ndarray:
+    def first_paths(self, n: int, start: int, end: int, passengers: int = NOMBRE_DE_PASSAGERS,
+                    log: bool = False) -> np.ndarray:
         """
-        Evaluate the first n paths and log them
-        Returns an array of n arrays representign circulation along the edges
+        Evaluate the first n paths and log them Returns an array of n arrays representign circulation along the edges
+        * start : the start station
+        * end : the end station
         """
 
-        # Les flux + calcul du flux initial
-        self.flow = linprog(
-            self.c,
-            A_eq=self.A,
-            b_eq=self.B,
-            options={
-                "rr": False,
-            },
+        #############################################################################
+        #                          LINPROG A_EQ AND B_EQ                            #
+        #############################################################################
+        # Reuse A matrix
+        A = self.A
+
+        b = np.zeros(len(self.data["stations"]))
+        b[start] = -passengers
+        b[end] = +passengers
+
+        #############################################################################
+        #                       INITIAL FLOW & STORE FLOWS                          #
+        #############################################################################
+
+        # Compute initial cost for empty flow
+        costs = self.compute_edge_costs(np.zeros(len(self.a)))
+
+        # Compute initial flow
+        flow = linprog(
+            costs,
+            A_eq=A,
+            b_eq=b,
         )["x"]
-        self.last_flow = np.zeros(self.flow.shape)
 
-        self.flows = []
+        # Store consecutive flows in this variable
+        flows = []
 
         for i in range(n):
             print("Step", i + 1, "of", n, "...")
@@ -603,37 +629,35 @@ class Paris:
             step = 1 / (i + 2)
 
             # Update the cost for each edge
-            costs = self.costs(self.flow)
+            costs = self.compute_edge_costs(flow)
 
-            self.last_flow = self.flow
+            # Update last flow
+            last_flow = flow
 
             # Solve the linear problem
             gradient = linprog(
                 costs,
-                A_eq=self.A,
-                b_eq=self.B,
-                options={
-                    "rr": False,
-                },
+                A_eq=A,
+                b_eq=b,
             )["x"]
 
             # Log this path
-            self.flows.append(gradient)
+            flows.append(gradient)
 
             # Compute the next flow
-            self.flow = (1 - step) * self.last_flow + step * gradient
+            flow = (1 - step) * last_flow + step * gradient
 
         if log:
             # Save paths
             print(n, "paths stored. Saving...")
 
             # De-numpify for json serialization
-            flows = [x.tolist() for x in self.flows]
+            flows = [x.tolist() for x in flows]
 
             success = write_json(f"first-{n}-paths.json", flows)
             print("Saving done with status", success)
 
-        return np.array(self.flows)
+        return np.array(flows)
 
 
 if __name__ == "__main__":
@@ -643,16 +667,11 @@ if __name__ == "__main__":
     # Braess.braess(Braess.BraessType.WITH_AB)
     # Braess.braess(Braess.BraessType.WITH_UPDATED_COSTS)
 
-    # Test avec paris
-    f = open("paris_network.json")
-    graph_data = json.loads(f.read())
-    f.close()
-
-    f = open("edge_distances.json")
-    edge_distances = json.loads(f.read())
-    f.close()
+    graph_data = read_json("paris_network.json")
+    edge_distances = read_json("edge_distances.json")
 
     p = Paris(graph_data, edge_distances)
 
     # p.solve()
-    p.solve_paths()
+    # p.solve_paths()
+    # p.first_paths(n=5, start=0, end=100)
