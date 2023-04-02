@@ -458,44 +458,43 @@ class Paris:
         if log:
             np.savetxt("out.csv", self.flows, delimiter=",")
 
-    def solve_paths(self, n: int = 5, couples: List[Tuple[int, int]] = (STATION_DEPART, STATION_ARRIVEE), log=True):
-        """Résout le problème avec les n premiers chemins
+    def solve_paths(self, n: int = 5,
+                    couples: List[Tuple[int, int, int]] = ((STATION_DEPART, STATION_ARRIVEE, NOMBRE_DE_PASSAGERS),),
+                    log=True):
+        """Solve a problem with multiple (start, end) couples with different amounts of passengers using the smart
+        path algorithm
         """
-
-        # TODO : do this first process in the function that extracts paths
-        # TODO : comme on va réutiliser ça pour faire plusieurs points de départ et d'arrivée, il faudrait faire en sorte que ça dépende moins de l'initialisation
+        #############################################################################
+        #                           COMPUTE ALL PATHS                               #
+        #############################################################################
         first_n_paths_time = time()  # Start time
 
-        first_n_paths = self.first_paths(n)
+        boolean_paths = np.empty((n * len(couples), len(self.c)))  # Uninitialized, must be filled
 
-        first_n_paths_time = time() - first_n_paths_time
+        # Fill the paths
+        for index, (start, end, _) in enumerate(couples):
+            boolean_paths[index * n: (index + 1) * n] = self.first_paths(n, start, end)
 
-        # DEBUG
-        print(first_n_paths.shape)
-
-        # Remove duplicates
-        # first_n_paths = np.unique(first_n_paths, axis=0)
+        first_n_paths_time = time() - first_n_paths_time  # End time
 
         setup_time = time()  # Setup time
-
-        # Extract boolean paths
-        # For each path, store its edges as a boolean value : this edge belongs / does not belong
-        boolean_paths: np.ndarray = first_n_paths != 0
-
         #############################################################################
         #                           BUILD LINPROG MATRIX                            #
         #############################################################################
         # The only constraint is that the sum of passengers along all paths is always equal to the initial total number
+        A = np.tile([1] * n + [0] * len(couples) * n, len(couples))[:-len(couples) * n].reshape(
+            (len(couples), len(couples) * n))  # Sum passengers for each path
+        b = np.array([passengers for start, end, passengers in couples])  # Total numbers of passengers
 
-        self.A = np.ones((1, len(first_n_paths)))  # Sum all passengers for all paths
-        self.B = NOMBRE_DE_PASSAGERS  # Total number of passengers
+        # TODO : déjà tester ça pour un seul couple, ça change pas mal la structure en termes de dimensions
 
         #############################################################################
         #                             BUILD COST MATRIX                             #
         #############################################################################
         # The cost is computed for each edge as a * flow + b
         # Agregate a & b coefficients for every path
-        # An A matrix must be built to account for overlapping edges. The b coefficient is constant and does not need to be adjusted
+        # An A matrix must be built to account for overlapping edges
+        # The b coefficient is constant and does not need to be adjusted
 
         # Boolean_paths is of size n * edges
         # Diagonal matrix of size edges * edges
@@ -518,56 +517,50 @@ class Paris:
         cost_vector = compute_cost_vector(np.zeros(n))
 
         # Solve the linear problem for this initial cost
-        self.flow = linprog(
+        flow = linprog(
             cost_vector,  # Cost vector : minimise the dot product cost_vector @ flow
-            A_eq=self.A,
-            b_eq=self.B,
-            options={
-                "rr": False,
-            },
+            A_eq=A,
+            b_eq=b,
         )["x"]
 
         # Store last flow value
-        self.last_flow = np.zeros(self.flow.shape)
+        last_flow = np.zeros(flow.shape)
 
         i = 0
 
         setup_time = time() - setup_time
         loop_time = time()
 
-        while np.sum(np.abs(self.flow - self.last_flow)) > SEUIL_CONVERGENCE:
+        while np.sum(np.abs(flow - last_flow)) > SEUIL_CONVERGENCE:
             step = 1 / (i + 2)
 
             # Update the cost
-            cost_vector = compute_cost_vector(self.flow)
+            cost_vector = compute_cost_vector(flow)
 
             # Update last flow value
-            self.last_flow = self.flow
+            last_flow = flow
 
             # Solve the linear problem
             gradient = linprog(
                 cost_vector,
-                A_eq=self.A,
-                b_eq=self.B,
-                options={
-                    "rr": False,
-                },
+                A_eq=A,
+                b_eq=b,
             )["x"]
 
             # Compute the next flow
-            self.flow = (1 - step) * self.last_flow + step * gradient
+            flow = (1 - step) * last_flow + step * gradient
 
             i += 1
 
             # DEBUG : print error percentage to see the progress
-            error = error_percentage(self.flow, self.last_flow)
+            error = error_percentage(flow, last_flow)
             print(
                 "Itération n°",
                 i,
                 "erreur :",
                 error,
                 "écart",
-                np.sum(np.abs(self.flow - self.last_flow)),
+                np.sum(np.abs(flow - last_flow)),
             )
 
         print("convergence après", i, "itérations")
@@ -583,7 +576,7 @@ class Paris:
         #############################################################################      
         if log:
             # Rebuild flow
-            converted_flow = boolean_paths.T @ self.flow
+            converted_flow = boolean_paths.T @ flow
 
             # Save in in a json file
             write_json("test_last_flow.json", list(converted_flow))
@@ -647,17 +640,19 @@ class Paris:
             # Compute the next flow
             flow = (1 - step) * last_flow + step * gradient
 
+        boolean_flows = np.array(flows) != 0
+
         if log:
             # Save paths
             print(n, "paths stored. Saving...")
 
             # De-numpify for json serialization
-            flows = [x.tolist() for x in flows]
+            flows = [x.tolist() for x in boolean_flows]
 
             success = write_json(f"first-{n}-paths.json", flows)
             print("Saving done with status", success)
 
-        return np.array(flows)
+        return boolean_flows
 
 
 if __name__ == "__main__":
@@ -675,3 +670,6 @@ if __name__ == "__main__":
     # p.solve()
     # p.solve_paths()
     # p.first_paths(n=5, start=0, end=100)
+
+    # Essai avec les 2 chemins à la fois
+    p.solve_paths(n=5, couples=[(0, 100, NOMBRE_DE_PASSAGERS), (210, 68, NOMBRE_DE_PASSAGERS)])
