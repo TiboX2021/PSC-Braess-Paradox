@@ -46,9 +46,10 @@ class Paris:
 
     def __init__(self, data: Network, edge_distances: List[float]):
         """Chargement des données du graphe de Paris dans une matrice
-        TODO : améliorer les coûts. Dans une première version, je vais mettre distance de l'arête + x.
-        Pour les correspondances, je vais mettre un truc + x, genre 5000 (il faut que ça soit plus gros que la plus grosse arête)
+        Pour les correspondances, je vais mettre un truc + x, genre 5000
+        (il faut que ça soit plus gros que la plus grosse arête)
         """
+        # Store graph data
         self.data = data
 
         # Création de la matrice A
@@ -58,6 +59,7 @@ class Paris:
                 + data["rer_connections"]
                 + data["trans_connections"]
         )
+        self.edges = edges
         #############################################################################
         #                             SHARED VARIABLES                              #
         #############################################################################
@@ -65,10 +67,7 @@ class Paris:
         # Matrix that represents the network (shared between all methods)
         self.A = gen_matrix_A(vertices=len(data["stations"]), edges=edges)
 
-        # COSTS
-        # Création du vecteur de coûts (initialisation à 0)
-        self.c = np.zeros(len(edges))
-
+        # COST COEFFS for the edge method
         # Coefficient multiplié par x pour chaque flux
         self.a = np.ones(len(edges))
 
@@ -86,71 +85,73 @@ class Paris:
         self.B[STATION_DEPART] = -NOMBRE_DE_PASSAGERS
         self.B[STATION_ARRIVEE] = +NOMBRE_DE_PASSAGERS
 
-        # DEBUG : store flows
-        self.flows = []
-
     def compute_edge_costs(self, flow):
         """Calcule les coûts par arête"""
         return self.a * flow + self.b
 
     def solve(self, log=True):
-        """Résout le problème"""
+        """Résout le problème avec la méthode des arêtes (long)"""
 
         setup_time = time()
-        # debug
-        # print(self.c.shape, self.A.shape, self.B.shape)
+
+        # Create b linprog vector
+        b = np.zeros(len(self.data["stations"]))
+
+        # Test avec les 2 premières stations
+        b[STATION_DEPART] = -NOMBRE_DE_PASSAGERS
+        b[STATION_ARRIVEE] = +NOMBRE_DE_PASSAGERS
+
+        # Initial cost (empty)
+        edge_costs = np.zeros(len(self.edges))
 
         # Les flux + calcul du flux initial
-        self.flow = linprog(
-            self.c,
+        flow = linprog(
+            edge_costs,
             A_eq=self.A,
             b_eq=self.B,
-            options={
-                "rr": False,
-            },
         )["x"]
-        self.last_flow = np.zeros(self.flow.shape)
+
+        # Create last flow & flow list
+        last_flow = np.zeros(flow.shape)
+        flows = []
 
         i = 0
 
         setup_time = time() - setup_time
         loop_time = time()
 
-        while np.sum(np.abs(self.flow - self.last_flow)) > SEUIL_CONVERGENCE:
+        while np.sum(np.abs(flow - last_flow)) > SEUIL_CONVERGENCE:
 
             step = 1 / (i + 2)
 
             if log:
-                self.flows.append(self.flow)
+                flows.append(flow)
 
             # Update the cost for each edge
-            costs = self.compute_edge_costs(self.flow)
+            edge_costs = self.compute_edge_costs(flow)
 
-            self.last_flow = self.flow
+            last_flow = flow
 
             # Solve the linear problem
             gradient = linprog(
-                costs,
+                edge_costs,
                 A_eq=self.A,
                 b_eq=self.B,
-                options={
-                    "rr": False,
-                },
             )["x"]
 
             # Compute the next flow
-            self.flow = (1 - step) * self.last_flow + step * gradient
+            flow = (1 - step) * last_flow + step * gradient
 
             i += 1
 
-            error = error_percentage(self.flow, self.last_flow)
+            error = error_percentage(flow, last_flow)
             print(
                 "Itération n°",
                 i,
                 "erreur :",
                 error,
                 "écart",
-                np.sum(np.abs(self.flow - self.last_flow)),
+                np.sum(np.abs(flow - last_flow)),
             )
 
         print("convergence après", i, "itérations")
@@ -162,7 +163,8 @@ class Paris:
 
         # Calcul des erreurs cumulées par rapport à la dernière valeur
         if log:
-            np.savetxt("out.csv", self.flows, delimiter=",")
+            #  noinspection PyTypeChecker
+            np.savetxt("out.csv", flows, delimiter=",")
 
     def solve_paths(self, n: int = 5,
                     couples: List[Tuple[int, int, int]] = ((STATION_DEPART, STATION_ARRIVEE, NOMBRE_DE_PASSAGERS),),
@@ -175,7 +177,7 @@ class Paris:
         #############################################################################
         first_n_paths_time = time()  # Start time
 
-        boolean_paths = np.empty((n * len(couples), len(self.c)))  # Uninitialized, must be filled
+        boolean_paths = np.empty((n * len(couples), len(self.edges)))  # Uninitialized, must be filled
 
         # Fill the paths
         for index, (start, end, _) in enumerate(couples):
@@ -360,12 +362,6 @@ class Paris:
 
 
 if __name__ == "__main__":
-    # pretty_print_braess([1, 2, 3, 4, 5], True)
-
-    # Braess.braess(Braess.BraessType.WITHOUT_AB)
-    # Braess.braess(Braess.BraessType.WITH_AB)
-    # Braess.braess(Braess.BraessType.WITH_UPDATED_COSTS)
-
     graph_data = read_json("paris_network.json")
     edge_distances = read_json("edge_distances.json")
 

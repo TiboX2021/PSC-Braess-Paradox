@@ -293,3 +293,12 @@ class Braess:
             " \\_________B_________/ \n"
             f"{Braess.embed_number(values[2 + AB * 2], size=12)}{Braess.embed_number(values[3 + AB * 2], size=11)}\n"
         )
+
+
+if __name__ == "__main__":
+    # pretty_print_braess([1, 2, 3, 4, 5], True)
+
+    # Braess.braess(Braess.BraessType.WITHOUT_AB)
+    # Braess.braess(Braess.BraessType.WITH_AB)
+    # Braess.braess(Braess.BraessType.WITH_UPDATED_COSTS)
+    pass
