@@ -162,6 +162,6 @@ if __name__ == "__main__":
     mode = int(mode)
 
     if mode == 1:
-        display.show_flow(last_flow)
+        display.show_flow(last_flow, endpoints=[(0, 100), (68, 210)])
     elif mode == 2:
         display.show_first_paths("first-5-paths.json")

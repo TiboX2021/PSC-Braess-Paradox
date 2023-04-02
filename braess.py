@@ -5,6 +5,19 @@ Modifier les 4 variables suivantes pour changer le flux calculé par l'algorithm
 Vous pouvez voir les indices des stations dans le fichier paris_network.json (avec les numéros
 des lignes en faisant une soustraction, ou directement si vous utilisez VSCode)
 """
+import warnings
+from enum import Enum
+from time import time
+# Disable warnings
+from typing import List, TypedDict, Callable, Dict, Tuple
+
+import numpy as np
+from scipy.optimize import linprog
+
+from util.util import Network, gen_matrix_A, write_json, read_json
+
+warnings.filterwarnings("ignore", "Solving system with option")
+warnings.filterwarnings("ignore", "Ill-conditioned matrix")
 
 ################################################################################
 #                       CALCUL D"UN TRAJET SUR PARIS                           #
@@ -38,20 +51,6 @@ B -> A
 B -> E
 
 """
-
-import warnings
-from enum import Enum
-from time import time
-# Disable warnings
-from typing import List, TypedDict, Callable, Dict, Tuple
-
-import numpy as np
-from scipy.optimize import linprog
-
-from util.util import Network, gen_matrix_A, write_json, read_json
-
-warnings.filterwarnings("ignore", "Solving system with option")
-warnings.filterwarnings("ignore", "Ill-conditioned matrix")
 
 
 # Helper functions
@@ -486,8 +485,6 @@ class Paris:
             (len(couples), len(couples) * n))  # Sum passengers for each path
         b = np.array([passengers for start, end, passengers in couples])  # Total numbers of passengers
 
-        # TODO : déjà tester ça pour un seul couple, ça change pas mal la structure en termes de dimensions
-
         #############################################################################
         #                             BUILD COST MATRIX                             #
         #############################################################################
@@ -514,7 +511,7 @@ class Paris:
         #                   COMPUTE INITIAL COST WITHOUT FLOW                       #
         #############################################################################
 
-        cost_vector = compute_cost_vector(np.zeros(n))
+        cost_vector = compute_cost_vector(np.zeros(n * len(couples)))
 
         # Solve the linear problem for this initial cost
         flow = linprog(
