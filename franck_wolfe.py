@@ -372,5 +372,18 @@ if __name__ == "__main__":
     # p.first_paths(n=5, start=0, end=100)
 
     # Essai avec les 2 chemins à la fois
-    p.solve_paths(n=5, couples=[(0, 100, NOMBRE_DE_PASSAGERS), (210, 68, NOMBRE_DE_PASSAGERS)])
+    # p.solve_paths(n=5, couples=[(0, 100, NOMBRE_DE_PASSAGERS), (210, 68, NOMBRE_DE_PASSAGERS)])
     # p.solve_paths(n=5, couples=[(0, 100, NOMBRE_DE_PASSAGERS)])
+
+    # Essai sur plusieurs couples avec beaucoup de trafic :
+    p.solve_paths(n=5, couples=[
+        (331, 280, NOMBRE_DE_PASSAGERS),
+        (82, 266, NOMBRE_DE_PASSAGERS),
+        (312, 294, NOMBRE_DE_PASSAGERS),
+        (109, 249, NOMBRE_DE_PASSAGERS),
+    ])
+
+    # Boulogne Jean-Jaurès -> Jourdain : 331 - 280
+    # Château Rouge -> Voltaire        : 82  - 266
+    # Vaugirard -> Abbesses            : 312 - 294
+    # Hoche -> Rue de la Pompe         : 109 - 249
