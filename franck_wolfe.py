@@ -12,6 +12,7 @@ from typing import List, Tuple
 import numpy as np
 from scipy.optimize import linprog
 
+from compute_flow_cost import compute_flow_cost
 from util.util import Network, gen_matrix_A, write_json, read_json
 
 # Disable warnings
@@ -89,7 +90,9 @@ class Paris:
         """Calcule les coûts par arête"""
         return self.a * flow + self.b
 
-    def solve(self, log=True) -> np.ndarray:
+    def solve(self, convergence_threshold=5,
+              destination: Tuple[int, int, int] = (STATION_DEPART, STATION_ARRIVEE, NOMBRE_DE_PASSAGERS), log=True,
+              output_file: str = None) -> np.ndarray:
         """Résout le problème avec la méthode des arêtes (long)"""
 
         setup_time = time()
@@ -97,9 +100,11 @@ class Paris:
         # Create b linprog vector
         b = np.zeros(len(self.data["stations"]))
 
+        start, end, passengers = destination
+
         # Test avec les 2 premières stations
-        b[STATION_DEPART] = -NOMBRE_DE_PASSAGERS
-        b[STATION_ARRIVEE] = +NOMBRE_DE_PASSAGERS
+        b[start] = -passengers
+        b[end] = +passengers
 
         # Initial cost (empty)
         edge_costs = np.zeros(len(self.edges))
@@ -120,11 +125,11 @@ class Paris:
         setup_time = time() - setup_time
         loop_time = time()
 
-        while np.sum(np.abs(flow - last_flow)) > SEUIL_CONVERGENCE:
+        while np.sum(np.abs(flow - last_flow)) > convergence_threshold:
 
             step = 1 / (i + 2)
 
-            if log:
+            if output_file is not None:
                 flows.append(flow)
 
             # Update the cost for each edge
@@ -144,33 +149,37 @@ class Paris:
 
             i += 1
 
-            error = error_percentage(flow, last_flow)
-            print(
-                "Itération n°",
-                i,
-                "erreur :",
-                error,
-                "écart",
-                np.sum(np.abs(flow - last_flow)),
-            )
+            if log:
+                error = error_percentage(flow, last_flow)
+                print(
+                    "Itération n°",
+                    i,
+                    "erreur :",
+                    error,
+                    "écart",
+                    np.sum(np.abs(flow - last_flow)),
+                )
 
         # Calcul des erreurs cumulées par rapport à la dernière valeur
-        if log:
+        if output_file is not None:
             #  noinspection PyTypeChecker
-            np.savetxt("out.csv", flows, delimiter=",")
+            # np.savetxt(output_file, flows, delimiter=",")
 
             print("convergence après", i, "itérations")
 
-            loop_time = time() - loop_time
-            print("TOTAL TIME :", setup_time + loop_time, "s")
-            print("Setup took", setup_time, "s")
-            print("Loop time took", loop_time, "s")
+            # loop_time = time() - loop_time
+            # print("TOTAL TIME :", setup_time + loop_time, "s")
+            # print("Setup took", setup_time, "s")
+            # print("Loop time took", loop_time, "s")
+
+            return flows
 
         # Return the last flow :
         return flow
 
     def solve_paths(self, n: int = 5,
                     couples: List[Tuple[int, int, int]] = ((STATION_DEPART, STATION_ARRIVEE, NOMBRE_DE_PASSAGERS),),
+                    convergence_threshold=5,
                     log=True) -> np.ndarray:
         """Solve a problem with multiple (start, end) couples with different amounts of passengers using the smart
         path algorithm
@@ -240,7 +249,7 @@ class Paris:
         setup_time = time() - setup_time
         loop_time = time()
 
-        while np.sum(np.abs(flow - last_flow)) > SEUIL_CONVERGENCE:
+        while np.sum(np.abs(flow - last_flow)) > convergence_threshold:
             step = 1 / (i + 2)
 
             # Update the cost
@@ -366,6 +375,142 @@ class Paris:
             print("Saving done with status", success)
 
         return boolean_flows
+
+    def benchmark_convergence_thresholds(self, n: int = 5,
+                                         couples: List[Tuple[int, int, int]] = (
+                                                 (STATION_DEPART, STATION_ARRIVEE, NOMBRE_DE_PASSAGERS),),
+                                         convergence_thresholds: Tuple[float] = (5,),
+                                         log=False) -> List[float]:
+        """Test convergence thresholds. The cost computed for each threshold will be returned at the end"""
+        #############################################################################
+        #                           COMPUTE ALL PATHS                               #
+        #############################################################################
+        if convergence_thresholds is None:
+            convergence_thresholds = [5]
+
+        boolean_paths = np.empty((n * len(couples), len(self.edges)))  # Uninitialized, must be filled
+
+        # Fill the paths
+        for index, (start, end, _) in enumerate(couples):
+            boolean_paths[index * n: (index + 1) * n] = self.first_paths(n, start, end, log=log)
+
+        setup_time = time()  # Setup time
+        #############################################################################
+        #                           BUILD LINPROG MATRIX                            #
+        #############################################################################
+        # The only constraint is that the sum of passengers along all paths is always equal to the initial total number
+        A = np.tile([1] * n + [0] * len(couples) * n, len(couples))[:-len(couples) * n].reshape(
+            (len(couples), len(couples) * n))  # Sum passengers for each path
+        b = np.array([passengers for start, end, passengers in couples])  # Total numbers of passengers
+
+        #############################################################################
+        #                             BUILD COST MATRIX                             #
+        #############################################################################
+        # The cost is computed for each edge as a * flow + b
+        # Agregate a & b coefficients for every path
+        # An A matrix must be built to account for overlapping edges
+        # The b coefficient is constant and does not need to be adjusted
+
+        # Boolean_paths is of size n * edges
+        # Diagonal matrix of size edges * edges
+        diagonal_a = np.diag(self.a)
+
+        # The result matrix is of size n * n
+        agregated_A_cost_matrix = boolean_paths @ diagonal_a @ boolean_paths.T
+
+        # Same for b, but only a vector is needed
+        agregated_B_cost_vector = boolean_paths @ self.b
+
+        def compute_cost_vector(flow_vector: np.ndarray) -> np.ndarray:
+            """Compute the cost vector (of size n) from the flow vector (of size n)"""
+            return agregated_A_cost_matrix @ flow_vector + agregated_B_cost_vector
+
+        #############################################################################
+        #                   COMPUTE INITIAL COST WITHOUT FLOW                       #
+        #############################################################################
+
+        cost_vector = compute_cost_vector(np.zeros(n * len(couples)))
+
+        # Solve the linear problem for this initial cost
+        flow = linprog(
+            cost_vector,  # Cost vector : minimise the dot product cost_vector @ flow
+            A_eq=A,
+            b_eq=b,
+        )["x"]
+
+        # Store last flow value
+        last_flow = np.zeros(flow.shape)
+
+        i = 0
+        #############################################################################
+        #                  BUILD TOTAL COST FOR EACH THRESHOLD                      #
+        #############################################################################
+        total_costs = [0] * len(convergence_thresholds)
+        convergence_thresholds = list(convergence_thresholds)
+        convergence_thresholds.sort(reverse=True)
+        print("convergence_thresholds",
+              convergence_thresholds)  # TODO : debug. A mon avis il faudra log chacun des coûts pour voir leur évolution
+        current_threshold_index = 0
+        loop = True
+
+        while loop:  # np.sum(np.abs(flow - last_flow)) > convergence_threshold:
+
+            step = 1 / (i + 2)
+
+            # Update the cost
+            cost_vector = compute_cost_vector(flow)
+
+            # Update last flow value
+            last_flow = flow
+
+            # TODO debug: affichage du coût correspondant pour en monitorer l'évolution au cours du temps
+            # TODO : j'ai l'impression qu'il suffit de 2 itérations pour obtenir un bon coût.
+            # Je vais comparer l'évolution avec le coût obtenu via l'algo lent, parce que c'est fou
+            # Remarque : d'oû l'importance de différents graphes pour évaluer l'algorithme !
+            # TODO: refaire tourner l'algo lent en monitorant les coûts à chaque itération, pour bien comprendre comment ça marche
+            total_flow = boolean_paths.T @ flow
+            total_cost = compute_flow_cost(total_flow)
+            print("total cost for iteration", i, "is", total_cost)
+
+            # Solve the linear problem
+            gradient = linprog(
+                cost_vector,
+                A_eq=A,
+                b_eq=b,
+            )["x"]
+
+            # Compute the next flow
+            flow = (1 - step) * last_flow + step * gradient
+
+            i += 1
+
+            # DEBUG : print error percentage to see the progress
+            if log:
+                error = error_percentage(flow, last_flow)
+                print(
+                    "Itération n°",
+                    i,
+                    "erreur :",
+                    error,
+                    "écart",
+                    np.sum(np.abs(flow - last_flow)),
+                )
+            # Threshold computation
+            current_diff = np.sum(np.abs(flow - last_flow))
+            if current_diff < convergence_thresholds[current_threshold_index]:
+                if True:
+                    print('Switching to next threshold :', current_threshold_index + 1, 'of',
+                          len(convergence_thresholds))
+                # Compute the cost for the total flow
+                total_flow = boolean_paths.T @ flow
+                total_costs[current_threshold_index] = compute_flow_cost(total_flow)
+                # Increment the threshold index
+                current_threshold_index += 1
+                # If we reached the end of the thresholds, stop the loop
+                if current_threshold_index == len(convergence_thresholds):
+                    loop = False
+
+        return total_costs
 
 
 if __name__ == "__main__":
