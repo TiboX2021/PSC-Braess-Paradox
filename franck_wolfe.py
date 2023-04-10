@@ -89,7 +89,7 @@ class Paris:
         """Calcule les coûts par arête"""
         return self.a * flow + self.b
 
-    def solve(self, log=True):
+    def solve(self, log=True) -> np.ndarray:
         """Résout le problème avec la méthode des arêtes (long)"""
 
         setup_time = time()
@@ -154,21 +154,24 @@ class Paris:
                 np.sum(np.abs(flow - last_flow)),
             )
 
-        print("convergence après", i, "itérations")
-
-        loop_time = time() - loop_time
-        print("TOTAL TIME :", setup_time + loop_time, "s")
-        print("Setup took", setup_time, "s")
-        print("Loop time took", loop_time, "s")
-
         # Calcul des erreurs cumulées par rapport à la dernière valeur
         if log:
             #  noinspection PyTypeChecker
             np.savetxt("out.csv", flows, delimiter=",")
 
+            print("convergence après", i, "itérations")
+
+            loop_time = time() - loop_time
+            print("TOTAL TIME :", setup_time + loop_time, "s")
+            print("Setup took", setup_time, "s")
+            print("Loop time took", loop_time, "s")
+
+        # Return the last flow :
+        return flow
+
     def solve_paths(self, n: int = 5,
                     couples: List[Tuple[int, int, int]] = ((STATION_DEPART, STATION_ARRIVEE, NOMBRE_DE_PASSAGERS),),
-                    log=True):
+                    log=True) -> np.ndarray:
         """Solve a problem with multiple (start, end) couples with different amounts of passengers using the smart
         path algorithm
         """
@@ -181,7 +184,7 @@ class Paris:
 
         # Fill the paths
         for index, (start, end, _) in enumerate(couples):
-            boolean_paths[index * n: (index + 1) * n] = self.first_paths(n, start, end)
+            boolean_paths[index * n: (index + 1) * n] = self.first_paths(n, start, end, log=log)
 
         first_n_paths_time = time() - first_n_paths_time  # End time
 
@@ -259,33 +262,36 @@ class Paris:
             i += 1
 
             # DEBUG : print error percentage to see the progress
-            error = error_percentage(flow, last_flow)
-            print(
-                "Itération n°",
-                i,
-                "erreur :",
-                error,
-                "écart",
-                np.sum(np.abs(flow - last_flow)),
-            )
-
-        print("convergence après", i, "itérations")
-
-        loop_time = time() - loop_time
-        print("TOTAL TIME :", first_n_paths_time + setup_time + loop_time, "s")
-        print("First", n, "paths took", first_n_paths_time, "s")
-        print("Setup took", setup_time, "s")
-        print("Loop time took", loop_time, "s")
+            if log:
+                error = error_percentage(flow, last_flow)
+                print(
+                    "Itération n°",
+                    i,
+                    "erreur :",
+                    error,
+                    "écart",
+                    np.sum(np.abs(flow - last_flow)),
+                )
 
         #############################################################################
         #               REBUILD THE LAST FLOW FROM PATHS TO EDGES                   #
         #############################################################################      
+
+        # Rebuild flow
+        converted_flow = boolean_paths.T @ flow
+
         if log:
-            # Rebuild flow
-            converted_flow = boolean_paths.T @ flow
+            print("convergence après", i, "itérations")
+
+            loop_time = time() - loop_time
+            print("TOTAL TIME :", first_n_paths_time + setup_time + loop_time, "s")
+            print("First", n, "paths took", first_n_paths_time, "s")
+            print("Setup took", setup_time, "s")
+            print("Loop time took", loop_time, "s")
 
             # Save in in a json file
             write_json("fast_last_flow.json", list(converted_flow))
+        return converted_flow
 
     def first_paths(self, n: int, start: int, end: int, passengers: int = NOMBRE_DE_PASSAGERS,
                     log: bool = False) -> np.ndarray:
@@ -323,7 +329,8 @@ class Paris:
         flows = []
 
         for i in range(n):
-            print("Step", i + 1, "of", n, "...")
+            if log:
+                print("Step", i + 1, "of", n, "...")
 
             step = 1 / (i + 2)
 
