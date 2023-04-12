@@ -20,8 +20,6 @@ Display the standard deviation for each result (matplotlib error bars)
 
 3. Convergence of the fast algorithm : monitor cost for each iteration (normalize + mean for different paths)
 Same for the fast algorithm.
-TODO : do the same and monitor the variation in iterations in function of the number of people and the number of paths
-TODO : there might be an important difference
 
 
 ### THIRD : compare the two algorithms
@@ -148,69 +146,93 @@ def benchmark_convergence_long():
     percentages = [0.1, 0.05, 0.01, 0.001, 0.0001]
     percentage_tags = ['10%', '5%', '1%', '0.1%', '0.01%']
 
-    # TODO : take the mean for n different paths (better for representative results)
-    # TODO : use multiprocessing to speedup the process
+    # Generate args
+    n_destinations = 10
+    n_passengers = 1000  # For 1 path, 1000 total passengers.
+    starts, ends = generate_pseudo_random_sources(n_destinations, len(p.data["stations"]), min_diff=100)
+    # Create function arguments
+    # TODO : adjust convergence_threshold=5 (the left iterations are not needed)
+    args = [(10, (start, end, n_passengers), False, "out.csv") for start, end in zip(starts, ends)]
 
-    # Pour l'instant : test avec les stations 0  à 100
-    # Voluntarily chose a very low convergence threshold to gather more data
+    # Run parallelized benchmarks
     print("Running convergence benchmark for the long algorithm...")
-    flows = p.solve(convergence_threshold=5, destination=(0, 100, 1000), log=False, output_file="out.csv")
+    pool = multiprocessing.Pool(processes=12)
+    flows_list = pool.starmap(p.solve, args)  # Generates flows for each path
 
-    costs = [compute_flow_cost(flow) for flow in flows]
+    # flows = p.solve(convergence_threshold=5, destination=(0, 100, 1000), log=False, output_file="out.csv")
+    # Compute all costs
+    costs_list = [[compute_flow_cost(flow) for flow in flows] for flows in flows_list]
+    iterations_list = [get_first_iterations_reaching_percentage(costs, percentages) for costs in costs_list]
 
-    iterations = get_first_iterations_reaching_percentage(costs, percentages)
+    # Numpify arrays for easier computation
+    np_iterations_list = np.array(iterations_list)
+
+    iterations_means = np.mean(np_iterations_list, axis=0)
+    iterations_std = np.std(np_iterations_list, axis=0)
 
     plt.title("Convergence benchmark for the long algorithm")
     y_pos = np.arange(len(percentage_tags))
-    plt.bar(y_pos, iterations, align='center')
+    plt.bar(y_pos, iterations_means, yerr=iterations_std, align='center')
     plt.xticks(y_pos, percentage_tags)
     plt.xlabel("Percentage of final cost")
     plt.ylabel('Number of iterations')
-    # TODO : plot error bars
     plt.show()
     print("Convergence benchmark completed")
 
 
-def benchmark_convergence_threshold():
+def benchmark_convergence_fast():
     """Test optimal convergence threshold between precision and execution time.
     Because the comparison is done with a linear difference between consecutive flows, the threshold should be
     proportionnal to the total number of passengers. The key is to find the correct factor.
     Note: this test was done with the fast algorithm, as it has aproximately the same progression as the fast one
-
-    TODO : run multiple instances with different sources and 5 paths in parallel with multiprocessing in order to go faster
     """
-    # First test
-    print("Running convergence threshold benchmark...")
+
+    percentages = [0.1, 0.05, 0.01, 0.001, 0.0001]
+    percentage_tags = ['10%', '5%', '1%', '0.1%', '0.01%']
 
     # Simulation parameters
     n_paths = 5
     passengers = 1000
-    n_sources = 1
-    # sources, destinations = generate_pseudo_random_sources(n_sources, len(p.data["stations"]), min_diff=50)
-    # print("sources and destinations generated", sources, destinations)
-    # TODO debug : la défense raspail
-    sources = (0,)
-    destinations = (100,)
+    n_sources = 10  # TODO : monter à 10 pour voir si ça change
+    n_simulations = 20  # Simulations en parallèle
+    convergence_threshold = 10  # TODO: higher, 10 is not necessary
 
-    # Run benchmark
-    total_passengers = n_sources * passengers
-    dividers = [5000, 1000, 800, 500, 100, 50, 10, 5, 1, 0.1]
-    convergence_thresholds = [total_passengers / divider for divider in dividers]
-    threshold_costs = p.benchmark_convergence_thresholds(n_paths,
-                                                         list(zip(sources, destinations, [passengers] * n_sources)),
-                                                         tuple(convergence_thresholds), log=False)
-    # Normalize costs
-    threshold_costs = [threshold_cost / max(threshold_costs) for threshold_cost in threshold_costs]
-    print(threshold_costs)
+    # Generate random sources
+    def convert_random_sources_to_args(couples: Tuple[np.ndarray, np.ndarray]):
+        return list(zip(couples[0], couples[1], [passengers] * len(couples[0])))
+
+    # Creating arguments
+    args = ((n_paths, convert_random_sources_to_args(
+        generate_pseudo_random_sources(n_sources, len(p.data["stations"]), min_diff=100)), convergence_threshold, False,
+             True)
+            for _ in
+            range(n_simulations))
+
+    print("Running convergence benchmark for the fast algorithm...")
+    pool = multiprocessing.Pool(processes=16)
+    flows_list = pool.starmap(p.solve_paths, args)  # Generates flows for each path
+
+    # Flows_list : all flows for the 20 simulations.
+    # flows = p.solve(convergence_threshold=5, destination=(0, 100, 1000), log=False, output_file="out.csv")
+    # Compute all costs
+    costs_list = [[compute_flow_cost(flow) for flow in flows] for flows in flows_list]
+    iterations_list = [get_first_iterations_reaching_percentage(costs, percentages) for costs in costs_list]
+
+    # Numpify arrays for easier computation
+    np_iterations_list = np.array(iterations_list)
+
+    iterations_means = np.mean(np_iterations_list, axis=0)
+    iterations_std = np.std(np_iterations_list, axis=0)
+
     print("Convergence threshold benchmark completed")
 
     # Plot results
-    plt.title("Convergence threshold benchmark")
-    plt.plot(convergence_thresholds, threshold_costs, label='5 couples')
-    # plt.xscale('log')  # Log scale for the threshold dividers
-    plt.xlabel('Passagers total divisé par...')
-    plt.ylabel('Coût total du flux (UA)')
-    plt.ylim((0, 1.1))
+    plt.title("Convergence benchmark for the fast algorithm")
+    y_pos = np.arange(len(percentage_tags))
+    plt.bar(y_pos, iterations_means, yerr=iterations_std, align='center')
+    plt.xticks(y_pos, percentage_tags)
+    plt.xlabel("Percentage of final cost")
+    plt.ylabel('Number of iterations')
     plt.show()
 
 
@@ -256,7 +278,8 @@ if __name__ == "__main__":
     print("Finished loading")
 
     # benchmark_correctness_for_n_paths()
-    benchmark_convergence_long()
+    # benchmark_convergence_long()
+    benchmark_convergence_fast()
 
     # benchmark_heavy_fast()
     # benchmark_convergence_threshold()

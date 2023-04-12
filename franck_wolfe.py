@@ -180,7 +180,7 @@ class Paris:
     def solve_paths(self, n: int = 5,
                     couples: List[Tuple[int, int, int]] = ((STATION_DEPART, STATION_ARRIVEE, NOMBRE_DE_PASSAGERS),),
                     convergence_threshold=5,
-                    log=True) -> np.ndarray:
+                    log=True, log_all=False) -> np.ndarray:
         """Solve a problem with multiple (start, end) couples with different amounts of passengers using the smart
         path algorithm
         """
@@ -249,6 +249,8 @@ class Paris:
         setup_time = time() - setup_time
         loop_time = time()
 
+        all_flows = []
+
         while np.sum(np.abs(flow - last_flow)) > convergence_threshold:
             step = 1 / (i + 2)
 
@@ -257,6 +259,8 @@ class Paris:
 
             # Update last flow value
             last_flow = flow
+            if log_all:
+                all_flows.append(boolean_paths.T @ flow)
 
             # Solve the linear problem
             gradient = linprog(
@@ -288,6 +292,9 @@ class Paris:
 
         # Rebuild flow
         converted_flow = boolean_paths.T @ flow
+
+        if log_all:
+            return all_flows
 
         if log:
             print("convergence après", i, "itérations")
