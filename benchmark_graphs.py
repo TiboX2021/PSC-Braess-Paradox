@@ -20,16 +20,19 @@ Display the standard deviation for each result (matplotlib error bars)
 
 3. Convergence of the fast algorithm : monitor cost for each iteration (normalize + mean for different paths)
 Same for the fast algorithm.
+# TODO: see if this is related to the total number of passengers. Test 10 destinations with 500 people instead to match
+5 destinations with 1000 people.
 
 
 ### THIRD : compare the two algorithms
 TODO : do the rest of the benchmarks
-
-4. Convergence threshold benchmark (what convergence threshold for correctness)
-5. Compare fast and slow algorithms (how much faster is the fast algorithm)
+4. Compare fast and slow algorithms (how much faster is the fast algorithm)
 
 ### FOURTH : study the performance of the algorithm under heavy load
-6. Heavy load benchmark (performance on heavy load)
+5. Heavy load benchmark (performance on heavy load for the fast algorithm)
+
+TODO: voir les notes évoquées en réunion. Il faut qu'en présentant les graphes dans l'ordre on comprenne
+directement de quoi on parle
 """
 import multiprocessing
 from time import time
@@ -192,7 +195,7 @@ def benchmark_convergence_fast():
 
     # Simulation parameters
     n_paths = 5
-    passengers = 1000
+    passengers = 500
     n_sources = 10  # TODO : monter à 10 pour voir si ça change
     n_simulations = 20  # Simulations en parallèle
     convergence_threshold = 10  # TODO: higher, 10 is not necessary
@@ -209,7 +212,7 @@ def benchmark_convergence_fast():
             range(n_simulations))
 
     print("Running convergence benchmark for the fast algorithm...")
-    pool = multiprocessing.Pool(processes=16)
+    pool = multiprocessing.Pool(processes=15)
     flows_list = pool.starmap(p.solve_paths, args)  # Generates flows for each path
 
     # Flows_list : all flows for the 20 simulations.

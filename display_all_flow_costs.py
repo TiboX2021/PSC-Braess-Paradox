@@ -25,18 +25,22 @@ c'est pour un chemin pris entre la station 0 et 100, soit entre
 c"est un chemin pas trop absurde, mais il me manque encore l'affichage des flux via matplotlib, fonctionà faire...
 """
 
+import json
+from typing import Dict, Tuple
 
+import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
-from braess import error_percentage
-import json
+
+from compute_flow_cost import compute_flow_cost
 from util.util import Network
-from typing import Dict, Tuple
-import matplotlib.cm as cm
+
+
+def error_percentage(a: np.ndarray, b: np.ndarray) -> float:
+    return np.sum(np.abs(a - b)) / np.sum(np.abs(b)) * 100
 
 
 def debug():
-
     flows = np.genfromtxt("out1.csv", delimiter=',')
 
     # Affichage des erreurs par rapport au dernier en fonction du temps
@@ -44,7 +48,7 @@ def debug():
 
     errors = [error_percentage(last_flow, flow) for flow in flows]
     consecutive_errors = [error_percentage(
-        flows[i+1], flows[i]) for i in range(len(flows) - 1)]
+        flows[i + 1], flows[i]) for i in range(len(flows) - 1)]
     consecutive_errors.append(0)
 
     costs = np.sum(flows, axis=1)
@@ -56,13 +60,13 @@ def debug():
     costs -= np.min(costs)
 
     consecutive_costs = [error_percentage(
-        costs[i+1], costs[i]) for i in range(len(costs) - 1)]
+        costs[i + 1], costs[i]) for i in range(len(costs) - 1)]
     consecutive_costs.append(consecutive_costs[-1])
 
-    #plt.plot(x, costs, label="costs")
+    # plt.plot(x, costs, label="costs")
     plt.plot(x, consecutive_errors, label="consecutive errors")
     plt.plot(x, errors, label="last error")
-    #plt.plot(x, consecutive_costs, label="consecutive costs")
+    # plt.plot(x, consecutive_costs, label="consecutive costs")
 
     plt.grid()
 
@@ -95,28 +99,28 @@ def metadata():
                                                ) + len(data["rer_connections"]) + len(data["trans_connections"]))
 
 
-def pretty_result():
-
-    flows = np.genfromtxt("out1.csv", delimiter=',')
+def print_relative_flow_costs():
+    """Print successive flow cost errors relative to the last one"""
+    flows = np.genfromtxt("out.csv", delimiter=',')
 
     # Affichage des erreurs par rapport au dernier en fonction du temps
     last_flow = flows[-1]
+    last_flow_cost = compute_flow_cost(last_flow)
 
-    errors = np.array([error_percentage(last_flow, flow) for flow in flows])
+    errors = np.array([error_percentage(last_flow_cost, compute_flow_cost(flow)) for flow in flows])
 
     # affichage
-    plt.plot(range(len(errors)), 100 * errors)
+    plt.plot(range(len(errors)), errors)
     plt.title("Erreurs relatives à la dernière itération")
     plt.xlabel("Itération i")
     plt.ylabel("Erreur relative (%)")
-    plt.ylim(-10, 100)
+    plt.ylim(-10, 110)
     plt.grid()
     plt.legend()
     plt.show()
 
 
 def affichage_dernier_flot():
-
     flows = np.genfromtxt("out1.csv", delimiter=',')
     last_flow = flows[-1]  # Dernier flot, à afficher
 
@@ -146,11 +150,11 @@ def affichage_dernier_flot():
         try:
 
             gps_start, gps_end = gps[data["stations"]
-                                     [start]], gps[data["stations"][end]]
+            [start]], gps[data["stations"][end]]
 
             # affichage de la ligne avec un colormap
             plt.plot((gps_start[1], gps_end[1]), (gps_start[0],
-                     gps_end[0]), c=cmap(flow_value/max_flow))
+                                                  gps_end[0]), c=cmap(flow_value / max_flow))
         except:
             print("not found")
 
@@ -158,9 +162,8 @@ def affichage_dernier_flot():
 
 
 if __name__ == "__main__":
-
     # debug()
     # convergence_couts()
     # metadata()
-    # pretty_result()
-    affichage_dernier_flot()
+    print_relative_flow_costs()
+    # affichage_dernier_flot()
