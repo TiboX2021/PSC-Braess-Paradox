@@ -40,6 +40,7 @@ from typing import Tuple, List
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.ticker import MaxNLocator
 
 from compute_flow_cost import compute_flow_cost
 from franck_wolfe import Paris
@@ -170,15 +171,14 @@ def benchmark_convergence_long():
     # Numpify arrays for easier computation
     np_iterations_list = np.array(iterations_list)
 
-    iterations_means = np.mean(np_iterations_list, axis=0)
-    iterations_std = np.std(np_iterations_list, axis=0)
-
     plt.title("Convergence benchmark for the long algorithm")
     y_pos = np.arange(len(percentage_tags))
-    plt.bar(y_pos, iterations_means, yerr=iterations_std, align='center')
-    plt.xticks(y_pos, percentage_tags)
-    plt.xlabel("Percentage of final cost")
-    plt.ylabel('Number of iterations')
+    plt.boxplot(np_iterations_list, vert=False)
+    plt.yticks(y_pos, percentage_tags)
+    plt.gca().invert_yaxis()  # Reverse y axis
+    plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))  # Set x axis to be integers
+    plt.ylabel("Percentage of final cost")
+    plt.xlabel('Number of iterations')
     plt.show()
     print("Convergence benchmark completed")
 
@@ -195,10 +195,10 @@ def benchmark_convergence_fast():
 
     # Simulation parameters
     n_paths = 5
-    passengers = 500
-    n_sources = 10  # TODO : monter à 10 pour voir si ça change
-    n_simulations = 20  # Simulations en parallèle
-    convergence_threshold = 10  # TODO: higher, 10 is not necessary
+    passengers = 1000  # in {500, 1000}
+    n_sources = 5  # in {5, 10}
+    n_simulations = 5  # Simulations en parallèle (20)
+    convergence_threshold = 10  # TODO: higher, as low as 10 is not necessary. Add a parameter for number of iterations
 
     # Generate random sources
     def convert_random_sources_to_args(couples: Tuple[np.ndarray, np.ndarray]):
@@ -224,18 +224,16 @@ def benchmark_convergence_fast():
     # Numpify arrays for easier computation
     np_iterations_list = np.array(iterations_list)
 
-    iterations_means = np.mean(np_iterations_list, axis=0)
-    iterations_std = np.std(np_iterations_list, axis=0)
-
     print("Convergence threshold benchmark completed")
 
-    # Plot results
+    # plt.figure(dpi=300)  # Increased figure scale
     plt.title("Convergence benchmark for the fast algorithm")
-    y_pos = np.arange(len(percentage_tags))
-    plt.bar(y_pos, iterations_means, yerr=iterations_std, align='center')
-    plt.xticks(y_pos, percentage_tags)
-    plt.xlabel("Percentage of final cost")
-    plt.ylabel('Number of iterations')
+    plt.boxplot(np_iterations_list, vert=False)  # Vert=false for horizontal boxplot
+    plt.yticks(np.arange(1, len(percentage_tags) + 1), percentage_tags)
+    plt.gca().invert_yaxis()  # Reverse y axis
+    plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))  # Set x axis to be integers
+    plt.ylabel("Percentage of final cost")
+    plt.xlabel('Number of iterations')
     plt.show()
 
 
@@ -243,6 +241,7 @@ def benchmark_convergence_fast():
 # Ne tester qu'un couple (parce que l'algo lent n'en supporte qu'un),
 # Mais sachant que le temps de calcul est proportionnel c'est pas très grave
 # Objectif: trouver au moins un facteur 200 pour 1 couple. Comparer les performances en termes de coût
+# TODO : utiliser le nombre d'itérations trouvé dans les benchmarks précédents
 def benchmark_compare_fast_slow():
     pass
 
@@ -283,6 +282,5 @@ if __name__ == "__main__":
     # benchmark_correctness_for_n_paths()
     # benchmark_convergence_long()
     benchmark_convergence_fast()
-
     # benchmark_heavy_fast()
     # benchmark_convergence_threshold()
