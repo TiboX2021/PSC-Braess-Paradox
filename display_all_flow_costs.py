@@ -107,7 +107,8 @@ def print_relative_flow_costs():
     last_flow = flows[-1]
     last_flow_cost = compute_flow_cost(last_flow)
 
-    errors = np.array([error_percentage(last_flow_cost, compute_flow_cost(flow)) for flow in flows])
+    errors = np.array(
+        [error_percentage(last_flow_cost, compute_flow_cost(flow)) for flow in flows])
 
     # affichage
     plt.plot(range(len(errors)), errors)
@@ -117,6 +118,10 @@ def print_relative_flow_costs():
     plt.ylim(-10, 110)
     plt.grid()
     plt.legend()
+
+    # Set log scales for better display
+    plt.xscale("log")
+
     plt.show()
 
 
@@ -150,7 +155,7 @@ def affichage_dernier_flot():
         try:
 
             gps_start, gps_end = gps[data["stations"]
-            [start]], gps[data["stations"][end]]
+                                     [start]], gps[data["stations"][end]]
 
             # affichage de la ligne avec un colormap
             plt.plot((gps_start[1], gps_end[1]), (gps_start[0],
