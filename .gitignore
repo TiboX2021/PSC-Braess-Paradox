@@ -1,13 +1,27 @@
+# Default behavior : ignore all outpus
 *.json
 *.csv
-!out_v2.csv
+*.txt
+
+# Paris graph network (metro + RER)
 !paris_network.json
+
+# Paris GPS coordinates for each station
 !paris_gps.json
+
+# Basic ignores
+__pycache__/
+.idea/
+.google-cookie
+
+
+# Computation output
+output/
+
+# Overrides for some outputs
+!out_v2.csv
 !edge_distances.json
 !last_flow.json
-__pycache__/
-.google-cookie
-*.txt
-output/
-images/
-.idea/
+
+# Python environment requirements
+!requirements.txt
