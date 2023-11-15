@@ -67,7 +67,8 @@ async def get_html_text(url: Tuple[str, str], session: aiohttp.ClientSession) ->
 async def fetch_batch(urls: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
     """Like fetch_urls, but not safe if too many requests (~100) are sent"""
     async with aiohttp.ClientSession() as session:
-        requests = (get_html_text(url, session) for url in urls)  # Create all http text requests
+        requests = (get_html_text(url, session)
+                    for url in urls)  # Create all http text requests
         results = await asyncio.gather(*requests)  # Send them at the same time
     # noinspection PyTypeChecker
     return results
@@ -108,7 +109,8 @@ def match_ratio(str1: str, str2: str) -> float:
     """Returns the matching ratio of the str's alphanumeric characters"""
     n = min(len(str1), len(str2))
 
-    max_chars = max(np.sum(np.char.isalnum(list(str1))), np.sum(np.char.isalnum(list(str2))))
+    max_chars = max(np.sum(np.char.isalnum(list(str1))),
+                    np.sum(np.char.isalnum(list(str2))))
 
     counter = 0
     for i in range(n):

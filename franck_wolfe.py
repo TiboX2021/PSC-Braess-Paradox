@@ -25,7 +25,8 @@ warnings.filterwarnings("ignore", "Ill-conditioned matrix")
 NOMBRE_DE_PASSAGERS = 1000
 STATION_DEPART = 0  # 210 # Invalides
 STATION_ARRIVEE = 100  # 68 # République
-SEUIL_CONVERGENCE = 5  # La norme 1 de la différence entre 2 flux consécutifs doit être plus petite que ça
+# La norme 1 de la différence entre 2 flux consécutifs doit être plus petite que ça
+SEUIL_CONVERGENCE = 5
 
 
 # Helper functions
@@ -55,10 +56,10 @@ class Paris:
 
         # Création de la matrice A
         edges = (
-                data["edges"]
-                + data["metro_connections"]
-                + data["rer_connections"]
-                + data["trans_connections"]
+            data["edges"]
+            + data["metro_connections"]
+            + data["rer_connections"]
+            + data["trans_connections"]
         )
         self.edges = edges
         #############################################################################
@@ -124,8 +125,11 @@ class Paris:
 
         setup_time = time() - setup_time
         loop_time = time()
+        START_TIME = time()
 
-        while np.sum(np.abs(flow - last_flow)) > convergence_threshold:
+        # while np.sum(np.abs(flow - last_flow)) > convergence_threshold:
+        # For loop in order to have faster benchmarks
+        for i in range(convergence_threshold):
 
             step = 1 / (i + 2)
 
@@ -160,25 +164,31 @@ class Paris:
                     np.sum(np.abs(flow - last_flow)),
                 )
 
-        # Calcul des erreurs cumulées par rapport à la dernière valeur
-        if output_file is not None:
-            #  noinspection PyTypeChecker
-            # np.savetxt(output_file, flows, delimiter=",")
+        # # Calcul des erreurs cumulées par rapport à la dernière valeur
+        # if output_file is not None:
+        #     #  noinspection PyTypeChecker
+        #     # np.savetxt(output_file, flows, delimiter=",")
 
-            print("convergence après", i, "itérations")
+        #     print("convergence après", i, "itérations")
 
-            # loop_time = time() - loop_time
-            # print("TOTAL TIME :", setup_time + loop_time, "s")
-            # print("Setup took", setup_time, "s")
-            # print("Loop time took", loop_time, "s")
+        #     # loop_time = time() - loop_time
+        #     # print("TOTAL TIME :", setup_time + loop_time, "s")
+        #     # print("Setup took", setup_time, "s")
+        #     # print("Loop time took", loop_time, "s")
 
-            return flows
+        #     return flows
 
-        # Return the last flow :
-        return flow
+        # # Return the last flow :
+        # return flow
+
+        # Benchmark return
+        TOT_TIME = time() - START_TIME
+        TOT_COST = compute_flow_cost(flow)
+        return TOT_TIME, TOT_COST
 
     def solve_paths(self, n: int = 5,
-                    couples: List[Tuple[int, int, int]] = ((STATION_DEPART, STATION_ARRIVEE, NOMBRE_DE_PASSAGERS),),
+                    couples: List[Tuple[int, int, int]] = (
+                        (STATION_DEPART, STATION_ARRIVEE, NOMBRE_DE_PASSAGERS),),
                     convergence_threshold=5,
                     log=True, log_all=False) -> np.ndarray:
         """Solve a problem with multiple (start, end) couples with different amounts of passengers using the smart
@@ -187,13 +197,16 @@ class Paris:
         #############################################################################
         #                           COMPUTE ALL PATHS                               #
         #############################################################################
+
         first_n_paths_time = time()  # Start time
 
-        boolean_paths = np.empty((n * len(couples), len(self.edges)))  # Uninitialized, must be filled
+        # Uninitialized, must be filled
+        boolean_paths = np.empty((n * len(couples), len(self.edges)))
 
         # Fill the paths
         for index, (start, end, _) in enumerate(couples):
-            boolean_paths[index * n: (index + 1) * n] = self.first_paths(n, start, end, log=log)
+            boolean_paths[index * n: (index + 1) *
+                          n] = self.first_paths(n, start, end, log=log)
 
         first_n_paths_time = time() - first_n_paths_time  # End time
 
@@ -204,7 +217,8 @@ class Paris:
         # The only constraint is that the sum of passengers along all paths is always equal to the initial total number
         A = np.tile([1] * n + [0] * len(couples) * n, len(couples))[:-len(couples) * n].reshape(
             (len(couples), len(couples) * n))  # Sum passengers for each path
-        b = np.array([passengers for start, end, passengers in couples])  # Total numbers of passengers
+        # Total numbers of passengers
+        b = np.array([passengers for start, end, passengers in couples])
 
         #############################################################################
         #                             BUILD COST MATRIX                             #
@@ -251,7 +265,10 @@ class Paris:
 
         all_flows = []
 
-        while np.sum(np.abs(flow - last_flow)) > convergence_threshold:
+        START_TIME = time()
+
+        # while np.sum(np.abs(flow - last_flow)) > convergence_threshold:
+        for i in range(convergence_threshold):
             step = 1 / (i + 2)
 
             # Update the cost
@@ -288,26 +305,31 @@ class Paris:
 
         #############################################################################
         #               REBUILD THE LAST FLOW FROM PATHS TO EDGES                   #
-        #############################################################################      
+        #############################################################################
 
         # Rebuild flow
-        converted_flow = boolean_paths.T @ flow
+        # converted_flow = boolean_paths.T @ flow
+        # return converted_flow  # For display
+        # if log_all:
+        #     return all_flows
 
-        if log_all:
-            return all_flows
+        # if log:
+        #     print("convergence après", i, "itérations")
 
-        if log:
-            print("convergence après", i, "itérations")
+        #     loop_time = time() - loop_time
+        #     print("TOTAL TIME :", first_n_paths_time +
+        #           setup_time + loop_time, "s")
+        #     print("First", n, "paths took", first_n_paths_time, "s")
+        #     print("Setup took", setup_time, "s")
+        #     print("Loop time took", loop_time, "s")
 
-            loop_time = time() - loop_time
-            print("TOTAL TIME :", first_n_paths_time + setup_time + loop_time, "s")
-            print("First", n, "paths took", first_n_paths_time, "s")
-            print("Setup took", setup_time, "s")
-            print("Loop time took", loop_time, "s")
+        #     # Save in in a json file
+        #     write_json("fast_last_flow.json", list(converted_flow))
+        # return converted_flow
 
-            # Save in in a json file
-            write_json("fast_last_flow.json", list(converted_flow))
-        return converted_flow
+        # TOT_TIME = time() - START_TIME
+        # TOT_COST = compute_flow_cost(converted_flow)
+        # return TOT_TIME, TOT_COST
 
     def first_paths(self, n: int, start: int, end: int, passengers: int = NOMBRE_DE_PASSAGERS,
                     log: bool = False) -> np.ndarray:
@@ -385,8 +407,9 @@ class Paris:
 
     def benchmark_convergence_thresholds(self, n: int = 5,
                                          couples: List[Tuple[int, int, int]] = (
-                                                 (STATION_DEPART, STATION_ARRIVEE, NOMBRE_DE_PASSAGERS),),
-                                         convergence_thresholds: Tuple[float] = (5,),
+                                             (STATION_DEPART, STATION_ARRIVEE, NOMBRE_DE_PASSAGERS),),
+                                         convergence_thresholds: Tuple[float] = (
+                                             5,),
                                          log=False) -> List[float]:
         """Test convergence thresholds. The cost computed for each threshold will be returned at the end"""
         #############################################################################
@@ -395,11 +418,13 @@ class Paris:
         if convergence_thresholds is None:
             convergence_thresholds = [5]
 
-        boolean_paths = np.empty((n * len(couples), len(self.edges)))  # Uninitialized, must be filled
+        # Uninitialized, must be filled
+        boolean_paths = np.empty((n * len(couples), len(self.edges)))
 
         # Fill the paths
         for index, (start, end, _) in enumerate(couples):
-            boolean_paths[index * n: (index + 1) * n] = self.first_paths(n, start, end, log=log)
+            boolean_paths[index * n: (index + 1) *
+                          n] = self.first_paths(n, start, end, log=log)
 
         setup_time = time()  # Setup time
         #############################################################################
@@ -408,7 +433,8 @@ class Paris:
         # The only constraint is that the sum of passengers along all paths is always equal to the initial total number
         A = np.tile([1] * n + [0] * len(couples) * n, len(couples))[:-len(couples) * n].reshape(
             (len(couples), len(couples) * n))  # Sum passengers for each path
-        b = np.array([passengers for start, end, passengers in couples])  # Total numbers of passengers
+        # Total numbers of passengers
+        b = np.array([passengers for start, end, passengers in couples])
 
         #############################################################################
         #                             BUILD COST MATRIX                             #
@@ -460,7 +486,8 @@ class Paris:
         current_threshold_index = 0
         loop = True
 
-        while loop:  # np.sum(np.abs(flow - last_flow)) > convergence_threshold:
+        # np.sum(np.abs(flow - last_flow)) > convergence_threshold:
+        while loop:
 
             step = 1 / (i + 2)
 
@@ -510,7 +537,8 @@ class Paris:
                           len(convergence_thresholds))
                 # Compute the cost for the total flow
                 total_flow = boolean_paths.T @ flow
-                total_costs[current_threshold_index] = compute_flow_cost(total_flow)
+                total_costs[current_threshold_index] = compute_flow_cost(
+                    total_flow)
                 # Increment the threshold index
                 current_threshold_index += 1
                 # If we reached the end of the thresholds, stop the loop

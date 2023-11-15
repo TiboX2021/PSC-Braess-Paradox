@@ -154,7 +154,8 @@ class Display:
 if __name__ == "__main__":
 
     # Load last flow (extracted via script because opening the total flow file is way too long)
-    display = Display(gps_datafile="paris_gps.json", network_datafile="paris_network.json")
+    display = Display(gps_datafile="paris_gps.json",
+                      network_datafile="paris_network.json")
 
     mode, filename = read_argv(2)
 
@@ -163,6 +164,7 @@ if __name__ == "__main__":
 
     if mode == 1:
         # display.show_flow(last_flow, endpoints=[(0, 100), (68, 210)])
-        display.show_flow(last_flow, endpoints=[(331, 280), (82, 266), (312, 294), (109, 249)])
+        # endpoints=[(331, 280), (82, 266), (312, 294), (109, 249)])
+        display.show_flow(last_flow, endpoints=[])
     elif mode == 2:
         display.show_first_paths("first-5-paths.json")
