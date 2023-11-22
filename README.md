@@ -57,7 +57,3 @@ Petits scripts de test pour afficher / analyser les données
 - TODO: paris_gps.json : les données de géolocalisation pour chaque station du réseau. Je suis en train de compléter ça
 
 ATTENTION A UTILISER encoding="utf-8" POUR OUVRIR LES FICHIERS
-
-## Cloner le projet
-
-Pour pouvoir copier le projet sur votre pc, vous pouvez le cloner avec git ou télécharger un .zip

@@ -1,4 +1,4 @@
-# Default behavior : ignore all outpus
+# Default behavior : ignore all outputs
 *.json
 *.csv
 *.txt
